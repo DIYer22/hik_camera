@@ -1,0 +1,33 @@
+.vscode
+*.pyc
+__pycache__/
+
+# vim swap file
+*.swp
+
+# coverage report
+test-results/
+htmlcov/
+.coverage
+
+# Distribution / packaging
+build/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+
+# sphinx
+/docs/api
+/docs/_build
+
+# mypy cache
+.mypy_cache/
+
+# tmp files
+*~
+
+# png or jpg image
+*.png
+*.jpg
+grab_img/
