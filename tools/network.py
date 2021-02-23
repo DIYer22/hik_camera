@@ -4,6 +4,7 @@ from datetime import datetime
 import curses
 import argparse
 
+
 def getNetworkData():
     # 获取网卡流量信息
     recv = {}
@@ -15,6 +16,7 @@ def getNetworkData():
         sent.setdefault(interface, data.get(interface).bytes_sent)
     return interfaces, recv, sent
 
+
 def getNetworkRate(num):
     # 计算网卡流量速率
     interfaces, oldRecv, oldSent = getNetworkData()
@@ -23,9 +25,16 @@ def getNetworkRate(num):
     networkIn = {}
     networkOut = {}
     for interface in interfaces:
-        networkIn.setdefault(interface, float("%.3f" % ((newRecv.get(interface) - oldRecv.get(interface)) / num)))
-        networkOut.setdefault(interface, float("%.3f" % ((newSent.get(interface) - oldSent.get(interface)) / num)))
+        networkIn.setdefault(
+            interface,
+            float("%.3f" % ((newRecv.get(interface) - oldRecv.get(interface)) / num)),
+        )
+        networkOut.setdefault(
+            interface,
+            float("%.3f" % ((newSent.get(interface) - oldSent.get(interface)) / num)),
+        )
     return interfaces, networkIn, networkOut
+
 
 def output(num, unit):
     # 将监控输出到终端
@@ -43,8 +52,12 @@ def output(num, unit):
         stdscr.addstr(0, 0, timeStr)
         i = 1
         for interface in interfaces:
-            if interface != "lo" and bool(1 - interface.startswith("veth")) and bool(
-                    1 - interface.startswith("蓝牙")) and bool(1 - interface.startswith("VMware")):
+            if (
+                interface != "lo"
+                and bool(1 - interface.startswith("veth"))
+                and bool(1 - interface.startswith("蓝牙"))
+                and bool(1 - interface.startswith("VMware"))
+            ):
                 if unit == "K" or unit == "k":
                     netIn = "%12.2fKB/s" % 0
                     netOut = "%11.2fKB/s" % 0
@@ -72,17 +85,27 @@ def output(num, unit):
             stdscr.addstr(0, 0, timeStr)
             i = 1
             for interface in interfaces:
-                if interface != "lo" and bool(1 - interface.startswith("veth")) and bool(
-                        1 - interface.startswith("蓝牙")) and bool(1 - interface.startswith("VMware")):
+                if (
+                    interface != "lo"
+                    and bool(1 - interface.startswith("veth"))
+                    and bool(1 - interface.startswith("蓝牙"))
+                    and bool(1 - interface.startswith("VMware"))
+                ):
                     if unit == "K" or unit == "k":
                         netIn = "%12.2fKB/s" % (networkIn.get(interface) / 1024)
                         netOut = "%11.2fKB/s" % (networkOut.get(interface) / 1024)
                     elif unit == "M" or unit == "m":
                         netIn = "%12.2fMB/s" % (networkIn.get(interface) / 1024 / 1024)
-                        netOut = "%11.2fMB/s" % (networkOut.get(interface) / 1024 / 1024)
+                        netOut = "%11.2fMB/s" % (
+                            networkOut.get(interface) / 1024 / 1024
+                        )
                     elif unit == "G" or unit == "g":
-                        netIn = "%12.3fGB/s" % (networkIn.get(interface) / 1024 / 1024 / 1024)
-                        netOut = "%11.3fGB/s" % (networkOut.get(interface) / 1024 / 1024 / 1024)
+                        netIn = "%12.3fGB/s" % (
+                            networkIn.get(interface) / 1024 / 1024 / 1024
+                        )
+                        netOut = "%11.3fGB/s" % (
+                            networkOut.get(interface) / 1024 / 1024 / 1024
+                        )
                     else:
                         netIn = "%12.1fB/s" % networkIn.get(interface)
                         netOut = "%11.1fB/s" % networkOut.get(interface)
@@ -108,13 +131,28 @@ def output(num, unit):
         curses.nocbreak()
         curses.endwin()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="A command for monitoring the traffic of network interface! Ctrl + C: exit")
-    parser.add_argument("-t", "--time", type=int, help="the interval time for ouput", default=1)
-    parser.add_argument("-u", "--unit", type=str, choices=["b", "B", "k", "K", "m", "M", "g", "G"],
-                        help="the unit for ouput", default="M")
-    parser.add_argument("-v", "--version", help="output version information and exit", action="store_true")
+        description="A command for monitoring the traffic of network interface! Ctrl + C: exit"
+    )
+    parser.add_argument(
+        "-t", "--time", type=int, help="the interval time for ouput", default=1
+    )
+    parser.add_argument(
+        "-u",
+        "--unit",
+        type=str,
+        choices=["b", "B", "k", "K", "m", "M", "g", "G"],
+        help="the unit for ouput",
+        default="M",
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        help="output version information and exit",
+        action="store_true",
+    )
     args = parser.parse_args()
     if args.version:
         print("v1.0")
