@@ -12,8 +12,13 @@
 
 
 
-# tools
+## Tools
 
 1. network.py (v1.0) 监控网口流量.可选参数:
    + 刷新时间time.
    + 流量单位b,B,k,K,m,M,g,G
+
+
+## TODO
+- [ ] 异常重置相机
+   - self.MV_CC_SetCommandValue("DeviceReset")
