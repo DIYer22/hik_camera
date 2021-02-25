@@ -2,6 +2,7 @@
 
 import boxx
 import numpy as np
+from threading import Lock, Timer
 import ctypes
 from ctypes import byref, POINTER, cast, sizeof, memset
 
@@ -18,22 +19,21 @@ ip_to_int = lambda ip: sum(
 
 
 class HikCamera(hik.MvCamera):
-    def build_by_ip(self, ip=None):
-        if ip is None:
-            ips = self.get_all_ips()
-            assert len(ips)
-            ip = list(ips)[0]
-        self.cam = self.get_all_cams()[ip]
-        self.cam.ip = ip
+    high_speed_lock = Lock()
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
         TIMEOUT_MS = 10000
-        try:
-            self.MV_CC_StartGrabbing()
-            assert not self.MV_CC_GetOneFrameTimeout(
-                byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
-            )
+        with self.high_speed_lock:
+            try:
+                self.MV_CC_StartGrabbing()
+                assert not self.MV_CC_GetOneFrameTimeout(
+                    byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
+                )
+
+            finally:
+                self.MV_CC_StopGrabbing()
+                pass
             img = (
                 np.array(self.data_buf)
                 .copy()
@@ -41,26 +41,23 @@ class HikCamera(hik.MvCamera):
             )
             return img
 
-        finally:
-            self.MV_CC_StopGrabbing()
-            pass
-
-    def adjust_auto_exposure(self, t=30):
+    def adjust_auto_exposure(self, t=2):
+        boxx.sleep(0.1)
         try:
             self.MV_CC_StartGrabbing()
-            print("before_exposure", cam.get_exposure())
+            print("before_exposure", self.get_exposure())
             boxx.sleep(t)
-            print("after_exposure", cam.get_exposure())
+            print("after_exposure", self.get_exposure())
         finally:
             self.MV_CC_StopGrabbing()
 
     def setting(self):
         assert not self.MV_CC_SetEnumValue("PixelFormat", 0x02180014)
 
+        # self.adjust_auto_exposure()
+        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
+        assert not self.MV_CC_SetFloatValue("ExposureTime", 250000)
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Continuous")
-        self.adjust_auto_exposure()
-        # assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
-        # assert not self.MV_CC_SetFloatValue("ExposureTime", 25000)
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
@@ -80,7 +77,8 @@ class HikCamera(hik.MvCamera):
         self.data_buf = (ctypes.c_ubyte * self.nPayloadSize)()
 
         # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
-        nPacketSize = self.MV_CC_GetOptimalPacketSize()
+        with self.high_speed_lock:
+            nPacketSize = self.MV_CC_GetOptimalPacketSize()
         assert nPacketSize
         assert not self.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
 
@@ -115,24 +113,22 @@ class HikCamera(hik.MvCamera):
 
         # ch:枚举设备 | en:Enum device
         assert not hik.MvCamera.MV_CC_EnumDevices(tlayerType, deviceList)
-        cams = {}
+        cams = MultiHikCamera()
         for i in range(0, deviceList.nDeviceNum):
             mvcc_dev_info = cast(
                 deviceList.pDeviceInfo[i], POINTER(hik.MV_CC_DEVICE_INFO)
             ).contents
             if mvcc_dev_info.nTLayerType == hik.MV_GIGE_DEVICE:
-
                 cam = cls()
-                # stDeviceList = cast(deviceList.pDeviceInfo[i], POINTER(hik.MV_CC_DEVICE_INFO)).contents
-
                 assert not cam.MV_CC_CreateHandle(mvcc_dev_info)
-                ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
-                cam.ip = ip
+                ip = cam.ip
                 cams[ip] = cam
+        cams = MultiHikCamera({ip: cams[ip] for ip in sorted(cams)})
         return cams
 
     def MV_CC_CreateHandle(self, mvcc_dev_info):
         self.mvcc_dev_info = mvcc_dev_info
+        self.ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
         assert not super().MV_CC_CreateHandle(mvcc_dev_info)
 
     def __del__(self):
@@ -140,8 +136,35 @@ class HikCamera(hik.MvCamera):
 
     def get_exposure(self):
         t = ctypes.c_float()
-        cam.MV_CC_GetFloatValue("ExposureTime", t)
+        self.MV_CC_GetFloatValue("ExposureTime", t)
         return t.value
+
+
+class MultiHikCamera(dict):
+    def __getattr__(self, attr):
+        def func(*args, **kwargs):
+            threads = []
+            res = {}
+
+            def _func(ip, cam):
+                res[ip] = getattr(cam, attr)(*args, **kwargs)
+
+            for ip, cam in self.items():
+                thread = Timer(0, _func, (ip, cam))
+                thread.start()
+                threads.append(thread)
+                thread.join()
+            [thread.join() for thread in threads]
+            res = {ip: res[ip] for ip in sorted(res)}
+            return res
+
+        return func
+
+    def __enter__(self):
+        self.__getattr__("__enter__")()
+
+    def __exit__(self, *l):
+        self.__getattr__("__exit__")(*l)
 
 
 if __name__ == "__main__":
@@ -151,11 +174,15 @@ if __name__ == "__main__":
     print(ips)
     ip = list(ips)[0]
     cams = HikCamera.get_all_cams()
-    cam = list(cams.values())[0]
-    with cam:
+    with cams:
+        imgs = cams.get_frame()
+        print("imgs = cams.get_frame()")
+        boxx.tree - imgs
+
+        cam = list(cams.values())[0]
+        cam = cams["10.9.5.102"]
         for i in range(3):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
                 print("cam.get_exposure", cam.get_exposure())
             boxx.show - img
-    pass
