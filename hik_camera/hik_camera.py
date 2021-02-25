@@ -34,11 +34,9 @@ class HikCamera(hik.MvCamera):
             finally:
                 self.MV_CC_StopGrabbing()
                 pass
-            img = (
-                np.array(self.data_buf)
-                .copy()
-                .reshape(stFrameInfo.nHeight, stFrameInfo.nWidth, -1)
-            )
+            h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
+            self.shape = (h, w, self.nPayloadSize // h // w)
+            img = np.array(self.data_buf).copy().reshape(*self.shape)
             return img
 
     def adjust_auto_exposure(self, t=2):
@@ -86,6 +84,11 @@ class HikCamera(hik.MvCamera):
         memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
 
         assert not self.MV_CC_SetEnumValue("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
+
+    def get_shape(self):
+        if not hasattr(self, "shape"):
+            self.get_frame()
+        return self.shape
 
     def __exit__(self, *l):
         self.MV_CC_CloseDevice()
@@ -179,8 +182,7 @@ if __name__ == "__main__":
         print("imgs = cams.get_frame()")
         boxx.tree - imgs
 
-        cam = list(cams.values())[0]
-        cam = cams["10.9.5.102"]
+        cam = cams.get("10.9.5.102", ip)
         for i in range(3):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
