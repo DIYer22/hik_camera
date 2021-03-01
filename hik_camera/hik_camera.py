@@ -85,6 +85,8 @@ class HikCamera(hik.MvCamera):
 
         assert not self.MV_CC_SetEnumValue("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
 
+        return self
+
     def get_shape(self):
         if not hasattr(self, "shape"):
             self.get_frame()
@@ -165,6 +167,7 @@ class MultiHikCamera(dict):
 
     def __enter__(self):
         self.__getattr__("__enter__")()
+        return self
 
     def __exit__(self, *l):
         self.__getattr__("__exit__")(*l)

@@ -1,5 +1,7 @@
-# 海康相机sdk
+# 海康网口相机控制库
+封装海康网口相机 SDK, 更易于使用
 
+Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py)  的 "\_\_main\_\_"
 ```bash
 # 快速测试
 python -m hik_camera.hik_camera
