@@ -144,6 +144,10 @@ class HikCamera(hik.MvCamera):
         self.MV_CC_GetFloatValue("ExposureTime", t)
         return t.value
 
+    def set_exposure(self, t):
+        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
+        assert not self.MV_CC_SetFloatValue("ExposureTime", t)
+
 
 class MultiHikCamera(dict):
     def __getattr__(self, attr):
