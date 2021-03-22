@@ -1,0 +1,478 @@
+,"名称（key）
+A节点[B节点]：表示A节点依赖于B节点",数据类型,数值范围定义,"访问模式
+R:可读 
+W:可写 
+W）：非取流状态可写",描述,
+Device Control,DeviceType,IEnumeration,"0：Transmitter
+1：Receiver
+2：Transceiver
+3：Peripheral",R,设备类型,
+,DeviceScanType,IEnumeration,"0：Areascan
+1：Linescan",R/(W),"设备sensor的扫描方式,表明是线阵相机还是面阵相机",
+,DeviceVendorName,IString,任意空终止字符串,R,设备的制造商名称,
+,DeviceModelName,IString,任意空终止字符串,R,设备型号,
+,DeviceManufacturerInfo,Istring,任意空终止字符串,R,设备的制造商信息,
+,DeviceVersion,IString,任意空终止字符串,R,设备版本,
+,DeviceFirmwareVersion,IString,任意空终止字符串,R,固件版本,
+,DeviceSerialNumber,IString,任意空终止字符串,R,设备序列号,
+,DeviceID,Istring,任意空终止字符串,R,设备ID,
+,DeviceUserID,IString,任意空终止字符串,R/W,用户自定义的名称,
+,DeviceUptime,IInteger,≥0,R,设备运行时间,
+,BoardDeviceType,IInteger,≥0,R,设备类型,
+,DeviceConnectionSelector,IInteger,≥0,R/(W),设备连接选择,
+,DeviceConnectionSpeed,IInteger,≥0，单位Mbps,R,设备连接速度,
+,DeviceConnectionStatus,IEnumeration,"0：Active
+1：Inactive",R,设备连接状态,
+,DeviceLinkSelector,IInteger,≥0,R/(W),设备连接选择,
+,DeviceLinkSpeed,IInteger,≥0,R,设备连接速度,
+,DeviceLinkConnectionCount,IInteger,≥0,R,设备连接数量,
+,DeviceLinkHeartbeatMode,IEnumeration ,"0：Off 
+1：On 
+",R/W ,是否需要心跳,
+,DeviceLinkHeartbeatTimeout,IInteger,500-600000,R/W ,心跳超时时间,
+,DeviceStreamChannelCount,IInteger,≥0,R,流通道数量,
+,DeviceStreamChannelSelector,IInteger,≥0,R/W,流通道选择,
+,DeviceStreamChannelType,IEnumeration,"0：Transmitter 
+1：Receiver ",R,流通道类型,
+,DeviceStreamChannelLink,IInteger,≥0,R/(W),流通道连接数量,
+,DeviceStreamChannelEndianness,IEnumeration,"0: Little
+1: Big",R/(W),图像数据的字节序,
+,DeviceStreamChannelPacketSize,IInteger,与相机相关。一般范围在220-9156，步进为8；,R/(W),接收端流数据的包大小,
+,DeviceEventChannelCount,IInteger,≥0,R,设备支持的,
+,DeviceCharacterSet,IEnumeration,"1：UTF-8
+2: ASCII",R,设备寄存器中使用的字符集,
+,DeviceReset,ICommand, - ,W,重启设备,
+,DeviceTemperatureSelector,IEnumeration,"0: Sensor
+1: Mainboard",R/W,选择某个部件温度测量,
+,DeviceTemperature,IFloat ,单位摄氏度,R,选中的设备部件温度,
+,FindMe,ICommand,-,W,发现当前设备,
+,DeviceMaxThroughput,IInteger ,≥0,R,设备最大吞吐量（带宽）,
+ImageFormatControl,WidthMax ,IInteger ,＞0,R ,图像最大宽度，binning之后的数据,
+,HeightMax ,IInteger ,＞0,R ,图像最大高度，binning之后的数据,
+,RegionSelector ,IEnumeration ,"0：Region0 
+1：Region1 
+2：Region2 
+8: All",R/(W),ROI选择器,
+,RegionDestination,IEnumeration ,"0：Stream0 
+1：Stream1 
+2: Stream2",R/(W),该ROI对应的码流,
+,Width,IInteger ,＞0,R/(W),ROI的宽,
+,Height,IInteger ,＞0,R/(W),ROI的高,
+,OffsetX,IInteger ,≥0,R/W ,ROI的水平方向偏移量,
+,OffsetY,IInteger ,≥0,R/W ,ROI的竖直方向偏移量,
+,ReverseX,IBoolean ,"True
+False",R/W ,是否需要水平翻转,
+,ReverseY,IBoolean ,"True
+False",R/W ,是否需要竖直翻转,
+,ReverseScanDirection,IBoolean ,≥0,R/(W),转换扫描方向,
+,PixelFormat,IEnumeration ,"0x01080001:Mono8
+0x01100003:Mono10
+0x010C0004:Mono10Packed
+0x01100005:Mono12
+0x010C0006:Mono12Packed
+0x01100007:Mono16
+0x02180014:RGB8Packed
+0x02100032:YUV422_8
+0x0210001F:YUV422_8_UYVY
+0x02180020:YUV8_UYV
+0x020C001E:YUV411_8_UYYVYY
+0x01080008:BayerGR8
+0x01080009:BayerRG8
+0x0108000A:BayerGB8
+0x0108000B:BayerBG8
+0x0110000c:BayerGR10
+0x0110000d:BayerRG10
+0x0110000e:BayerGB10
+0x0110000f:BayerBG10
+0x010C0029:BayerBG10Packed
+0x010C0026:BayerGR10Packed
+0x010C0027:BayerRG10Packed
+0x010C0028:BayerGB10Packed
+0x01100010:BayerGR12
+0x01100011:BayerRG12
+0x01100012:BayerGB12
+0x01100013:BayerBG12
+0x010C002D:BayerBG12Packed
+0x010C002A:BayerGR12Packed
+0x010C002B:BayerRG12Packed
+0x010C002C:BayerGB12Packed
+0x0110002E:BayerGR16
+0x0110002F:BayerRG16
+0x01100030:BayerGB16
+0x01100031:BayerBG16",R/(W) ,图像像素格式，不同型号的相机，支持的像素格式有差异，以实际的为准,
+,PixelSize,IEnumeration ,"8 ：Bpp8 
+10：Bpp10 
+12：Bpp12 
+16：Bpp16 
+24：Bpp24 
+32：Bpp32 ",R/(W) ,一个像素包含的比特数,
+,ImageCompressionMode,IEnumeration ,"0：Off 
+1：JPEG ",R/W,图像压缩模式,
+,ImageCompressionQuality,IInteger ,≥50,R/(W) ,图像压缩质量,
+,TestPatternGeneratorSelector,IEnumeration ,"8：Sensor
+0：Region0 
+1: Region1 
+2: Region2",R/W,测试图像生成器选择,
+,TestPattern[TestPatternGeneratorSelector],IEnumeration ,"0 ：Off 
+1：Black 
+2：White
+3：GreyHorizontalRamp
+4：GreyVerticalRamp 
+5：GreyHorizontalRampMoving
+6：GreyVerticalRampMoving
+7：HorizontalLineMoving
+8：VerticalLineMoving
+9：ColorBar
+10：FrameCounter
+11：MonoBar
+12：TestImage12
+13：TestImage13
+14：ObliqueMonoBar
+15：ObliqueColorBar
+16：GradualMonoBar",R/W,测试图像选择,
+,BinningSelector,IEnumeration ,"0：Region0 
+1: Region1 
+2: Region2",R/W,像素合并选择,
+,BinningHorizontal[BinningSelector],IEnumeration ,"1：BinningHorizontal1
+2: BinningHorizontal2 
+3: BinningHorizontal3
+4：BinningHorizontal4",R/W,水平像素合并,
+,BinningVertical[BinningSelector],IEnumeration ,"1：BinningVertical1
+2: BinningVertical2 
+3: BinningVertical3
+4：BinningVertical4",R/W,垂直像素合并,
+,DecimationHorizontal,IEnumeration ,"1：DecimationHorizontal1
+2: DecimationHorizontal2 
+3: DecimationHorizontal3
+4：DecimationHorizontal4",R/W,水平像素采样,
+,DecimationVertical,IEnumeration ,"1：DecimationVertical1
+2: DecimationVertical2 
+3: DecimationVertical3
+4：DecimationVertical4",R/W,垂直像素采样,
+,Deinterlacing,IEnumeration ,"0:Off 
+1:LineDuplication
+2:Weave ",R/W ,,
+,FrameSpecInfoSelector,IEnumeration ,"0 ：Timestamp
+1：Gain 
+2：Exposure
+3：BrightnessInfo
+4：WhiteBalance 
+5：Framecounter
+6：ExtTriggerCount
+7：LineInputOutput
+8：ROIPosition",R/(W) ,水印信息选择,
+,FrameSpecInfo,IBoolean ,"True
+False",R/W,是否使能该水印信息,
+AcquisitionControl ,AcquisitionMode,IEnumeration ,"0:SingleFrame 
+1:MultiFrame 
+2:Continuous ",R/(W) ,采集模式，单帧、多帧、连续,
+,AcquisitionStart,ICommand , -,(R)/W,开始取流,
+,AcquisitionStop,ICommand , -,(R)/W,结束取流,
+,AcquisitionBurstFrameCount ,IInteger ,≥1,R/(W) ,一次触发采集的帧数,
+,AcquisitionFrameRate,IFloat ,≥0.0，单位fps,R/W ,Trigger Mode是off的时候该值生效,
+,AcquisitionFrameRateEnable,IBoolean ,,R/W ,设置的帧速率是否起效,
+,AcquisitionLineRate,IInteger ,≥1,R/W ,行频设置,
+,AcquisitionLineRateEnable,IBoolean ,"True
+False",R/W ,行频控制使能,
+,ResultingLineRate,IInteger ,"≥0,单位hz",R,实际行频,
+,ResultingFrameRate,IFloat ,≥0.0，单位fps,R,相机的实际采集帧率,
+,TriggerSelector,IEnumeration ,"0 ：AcquisitionStart 
+1：AcquisitionEnd 
+2：AcquisitionActive
+3：FrameStart
+4：FrameEnd 
+5：FrameActive
+6：FrameBurstStart
+7：FrameBurstEnd
+8：FrameBurstActive
+9：LineStart
+10：ExposureStart
+11：ExposureEnd
+12：ExposureActive",R/W ,触发事件选择,
+,TriggerMode[TriggerSelector],IEnumeration ,"0：Off 
+1：On",R/W ,触发模式,
+,TriggerSoftware[TriggerSelector],ICommand,-,(R)/W,执行一次软触发,
+,TriggerSource[TriggerSelector],IEnumeration ,"0:Line0
+1:Line1
+2:Line2
+3.Line3
+4:Counter0
+7:Software
+8:FrequencyConverter",R/W ,触发源,
+,TriggerActivation[TriggerSelector],IEnumeration ,"0:RisingEdge 
+1:FallingEdge 
+2.LevelHigh
+3.LevelLow",R/W ,触发上升沿、下降沿、高电平、低电平等,
+,TriggerDelay[TriggerSelector],IFloat ,≥0.0，单位us,R/W ,触发延时,
+,TriggerCacheEnable,IBoolean ,"1
+0",R/W ,是否使能触发缓存,
+,SensorShutterMode,IEnumeration ,"0:GlobalReset
+1:TriggerRolling",R/W,设置传感器曝光模式,
+,ExposureMode,IEnumeration ,"0:Timed 
+1:TriggerWidth ",R/W ,曝光模式选择,
+,ExposureTime,IFloat ,≥0.0，单位us,R/W ,曝光时间,
+,ExposureAuto,IEnumeration ,"0:Off 
+1:Once 
+2.Continuous",R/W ,自动曝光,
+,AutoExposureTimeLowerLimit,IInteger ,≥2，单位us,R/W ,自动曝光下限,
+,AutoExposureTimeUpperLimit,IInteger ,≥2，单位us,R/W ,自动曝光上限,
+,GainShutPrior,IEnumeration ,"0:Shut
+1:Gain",R/W,设置增益和曝光的优先级,
+,FrameTimeoutEnable,IBoolean ,"0：Off 
+1：On",R/W ,帧超时使能,
+,FrameTimeoutTime,IInteger ,≥87，单位ms,R/W ,帧超时时间,
+,HDREnable,IBoolean ,"1
+0",R/W ,是否使能宽动态,
+,HDRSelector,IInteger ,"≥0,≤3",R/W ,HDR选择器,
+,HDRShuter,IInteger ,≥32,R/W ,HDR曝光值,
+,HDRGain,IFloat ,≥0,R/W ,HDR增益值,
+DigitalIOControl,LineSelector,IEnumeration ,"0:Line0
+1:Line1
+2:Line2
+3:Line3
+4:Line4",R/W,I/O选择,
+,LineMode[LineSelector],IEnumeration ,"0:Input
+1:Output
+2:Trigger
+8:Strobe",R/W,I/O模式,
+,LineInverter[LineSelector],IBoolean ,"1
+0",R/W ,I/O电平转换,
+,LineTermination,IBoolean ,"1
+0",R/W ,I/O单端差分选择,
+,LineStatus[LineSelector],IBoolean,-,R/(W) ,I/O 状态,
+,LineStatusAll,IInteger,≥0,R,所有I/O状态,
+,LineSource[LineSelector],IEnumeration ,0:ExposureActive,R/W ,输出的事件源,
+,StrobeEnable,IBoolean ,"1
+0",R/W ,,
+,LineDebouncerTime,IInteger,-,R/W,I/O去抖时间,
+,StrobeLineDuration,IInteger ,≥0,R/W ,输出电平持续时间，单位us,
+,StrobeLineDelay,IInteger ,≥0,R/W ,输出延时，单位us,
+,StrobeLinePreDelay,IInteger ,≥0,R/W ,预延时，单位us,
+Counter And Timer Control,CounterSelector,IEnumeration ,"0:Counter0
+1:Counter1
+2:Counter2",R/W ,计数器选择,
+,CounterEventSource[CounterSelector],IEnumeration ,"0:Off
+11:Line0
+12:Line1
+13:Line2
+1：AcquisitionTrigger
+2：AcquisitionStart
+3：AcquisitionEnd
+4：FrameTrigger
+5：FrameStart
+6：FrameEnd
+7：FrameBurstStart
+8：FrameBurstEnd
+9：FrameBurstEnd
+10：LineEnd",R/W ,计数器事件源,
+,CounterResetSource[CounterSelector],IEnumeration ,"0: Off
+1：CounterTrigger
+3：Software
+5：FrameTrigger
+6：FrameStart",R/W ,计数器复位源,
+,CounterReset[CounterSelector],ICommand,-,(R)/W,计数器复位,
+,CounterValue[CounterSelector],IInteger ,≥1,R/W ,计数器值,
+,CounterCurrentValue,IInteger ,-,R,计数器当前值,
+Analog Control,Gain[GainSelector],IFloat ,≥0.0，单位dB,R/W ,增益值,
+,GainAuto[GainSelector],IEnumeration ,"0:Off 
+1:Once 
+2.Continuous",R/W ,自动增益,
+,AutoGainLowerLimit,IFloat ,≥0.0，单位dB,R/W ,自动增益下限,
+,AutoGainUpperLimit,IFloat ,≥0.1，单位dB,R/W ,自动增益上限,
+,ADCGainEnable,IBoolean ,"0：Off 
+1：On",R/W ,ADC 增益使能,
+,DigitalShift,IFloat ,≥0.0,R,数字偏移调节,
+,DigitalShiftEnable,IBoolean ,"0：Off 
+1：On",R/W ,数字偏移使能,
+,Brightness,IInteger ,≥0,R/W ,亮度,
+,BlackLevel[BlackLevelSelector],Iinteger,≥0,R/W ,黑电平调节,
+,BlackLevelEnable,IBoolean ,"0：Off 
+1：On",R/W ,黑电平调节使能,
+,BlackLevelAuto[BlackLevelSelector],IEnumeration ,"0:Off 
+1:Continuous
+2:Once ",R/W ,黑电平调节方式,
+,BalanceWhiteAuto,Ienumeration,"0: Off 
+2: Once 
+1. Continuous",R/W ,自动白平衡,
+,BalanceRatioSelector,Ienumeration,"0: Red 
+1: Green 
+2. Blue",R/W,白平衡比例选择,
+,BalanceRatio[BalanceRatioSelector],Iinteger,≥0,R ,白平衡值,
+,Gamma ,IFloat ,＞0.0,R/W ,伽马调节,
+,GammaSelector,Ienumeration,"1：User 
+2：sRGB",R/W ,Gamma选择,
+,GammaEnable,IBoolean ,"0：Off 
+1：On",R/W ,Gamma使能,
+,Sharpness,IInteger ,≥0,R/W ,图像锐度,
+,SharpnessEnable,IBoolean ,,R/W ,启用/禁用锐度调节,
+,SharpnessAuto,IEnumeration ,"0:Off 
+1:Continuous
+2:Once ",R/W ,锐度自动调节类型,
+,Hue,IInteger ,≥0,R,色度值调节,
+,HueEnable,IBoolean ,"0：Off 
+1：On",R/W,色度使能,
+,HueAuto,IEnumeration ,"0:Off 
+1:Continuous
+2:Once ",R/W ,灰度自动调节类型,
+,Saturation,IInteger ,≥0,R,饱和度值调节,
+,SaturationEnable,IBoolean ,"0：Off 
+1：On",R/W,饱和度使能,
+,SaturationAuto,IEnumeration ,"0:Off 
+1:Continuous
+2:Once ",R/W ,饱和度自动调节类型,
+,DigitalNoiseReductionMode,IEnumeration ,"0:Off 
+1:Normal
+2:Expert ",R/W,数字降噪等级选择,
+,NoiseReduction,IInteger ,≥1,R/W,降噪值,3D降噪版本特有
+,AirspaceNoiseReduction,IInteger ,≥1,R/W,空域降噪,
+,TemporalNoiseReduction,IInteger ,≥1,R/W,时域降噪,
+,AutoFunctionAOISelector,IEnumeration ,"0: AOI1
+1: AOI2",R/W,自动AOI选择,
+,AutoFunctionAOIWidth,IInteger ,≥0,R/W,自动AOI宽,
+,AutoFunctionAOIHeight,IInteger ,≥0,R/W,自动AOI高,
+,AutoFunctionAOIOffsetX,IInteger ,≥0,R,自动AOI水平方向偏移,
+,AutoFunctionAOIOffsetY,IInteger ,≥0,R,自动AOI竖直方向偏移,
+,AutoFunctionAOIUsageIntensity,IBoolean ,"0：Off 
+1：On",R/W,根据AOI区域自动曝光,
+,AutoFunctionAOIUsageWhiteBalance,IBoolean ,"0：Off 
+1：On",R,根据AOI区域自动白平衡,
+LUT Control,LUTSelector,IEnumeration ,"0:Luminance 
+1:Red 
+2:Green 
+3:Blue ",R/W ,亮度、R\G\B,
+,LUTEnable[LUTSelector],IBoolean ,"True
+False",R/W ,使能,
+,LUTIndex[LUTSelector],IInteger ,≥0,R/W ,索引号,
+,LUTValue[LUTSelector][LUTIndex],IInteger ,Device-specific,R/W ,值,
+,LUTValueAll[LUTSelector],Register,Device-specific,R/W,LUT所有的值,
+EncoderControl,EncoderSelector,IEnumeration,"0 ：Encoder0 
+1：Encoder1 
+2：Encoder2",R/W ,编码器选择,
+,EncoderSourceA,IEnumeration,"0 ：Line0 
+1：Line1 
+2：Line2
+3：Line3",R/W ,编码器A源选择,
+,EncoderSourceB,IEnumeration,"0 ：Line0 
+1：Line1 
+2：Line2
+3：Line3",R/W ,编码器B源选择,
+,EncoderTriggerMode,IEnumeration,"0 ：AnyDirection 
+1：ForwardOnly",R/W ,编码器触发模式,
+,EncoderCounterMode,IEnumeration,"0 ：IgnoreDirection 
+1：FollowDirection",R/W ,编码器计数模式,
+,EncoderCounter,IInteger ,≥0,R,编码器计数器值调节,
+,EncoderCounterMax,IInteger ,≥1,R/W ,编码器计数器最大值,
+,EncoderCounterReset,ICommand ,-,R/W ,编码器计数器复位,
+,EncoderMaxReverseCounter,IInteger ,≥1,R/W ,编码器最大反转计数器值,
+,EncoderReverseCounterReset,ICommand ,-,R/W ,编码器反转计数器复位,
+FrequencyConverterControl,InputSource,IEnumeration,"0 ：Line0 
+1：Line1 
+2：Line2
+3：Line3",R/W ,分频器输入源,
+,SignalAlignment,IEnumeration,"0 ：RisingEdge 
+1：FallingEdge ",R/W ,分频器信号方向,
+,PreDivider,IInteger ,≥1,R/W,前置分频器调节,
+,Multiplier,IInteger ,≥1,R/W,倍频器调节,
+,PostDivider,IInteger ,≥1,R/W,后置分频器调节,
+ShadingCorrection,ShadingSelector,IEnumeration ,"0:FPNCCorrection
+1:PRNUCCorrection",R/W,明暗场校正选择,
+,ActivateShading,ICommand ,-,R/(W) ,主动校正,
+,NUCEnable,IBoolean,"0:Off
+1:ON",R/W,NUC使能开关,
+,FPNCEnable,IBoolean,"1:On
+0:Off",R,FPNC状态开关,
+,PRNUCEnable,IBoolean,"0:Off
+1:ON",R,PRNUC状态开关,
+User Set Control,UserSetCurrent,IInteger ,>=0,R,当前用户参数,
+,UserSetSelector,IEnumeration ,"0:Default
+1:User set 1
+2:User set 2
+3:User set 3
+",R/W ,设置载入的参数,
+,UserSetLoad[UserSetSelector],ICommand , -,R/W,加载,
+,UserSetSave[UserSetSelector],ICommand ,-,(R)/W,用户参数保存,
+,UserSetDefault,IEnumeration ,"0:Default
+1:User set 1
+2:User set 2
+3:User set 3",R/W ,默认状态,
+Transport Layer Control,PayloadSize,IInteger ,≥0,R ,一帧数据的大小,
+,GevVersionMajor,IInteger,GEV主版本号,R,GEV主版本号,
+,GevVersionMinor,IInteger,GEV副版本号,R,GEV子版本号,
+,GevDeviceModeIsBigEndian,IBoolean,"0：not BigEndian
+1: Is BigEndian",R,大端,
+,GevDeviceModeCharacterSet,IEnumeration ,1：UTF8,R,字符集,
+,GevInterfaceSelector,IInteger,>=0,R/W,GEV接口数,
+,GevMACAddress,IInteger,Mac地址,R,MAC地址,
+,GevSupportedOptionSelector,IEnumeration ,"31 ：UserDefinedName 
+30：SerialNumber 
+29：HeartbeatDisable
+28：LinkSpeed
+27 ：CCPApplicationSocket
+26：ManifestTable
+25：TestData
+24：DiscoveryAckDelay
+23 ：DiscoveryAckDelayWritable 
+22：ExtendedStatusCodes 
+21：PrimaryApplicationSwitchover
+6 ：Action 
+5：PendingAck
+4：EventData
+3：Event
+2 ：PacketResend
+1：WriteMem 
+0：CommandsConcatenation
+34：IPConfigurationLLA
+33：IPConfigurationDHCP
+32：IPConfigurationPersistentIP
+63：PAUSEFrameReception
+66：StreamChannelSourceSocket",R/W,相机可以支持的功能选项,
+,GevSupportedOption[GevSupportedOptionSelector],IBoolean,"0：Off 
+1：On",R,相机是否支持Selector 选择的功能,
+,GevCurrentIPConfigurationLLA,IBoolean,"0：Off 
+1：On",R,IP是否为LLA,
+,GevCurrentIPConfigurationDHCP[GevInterfaceSelector],IBoolean,"0：Off 
+1：On",R/W,IP是否为DHCP,
+,GevCurrentIPConfigurationPersistentIP[GevInterfaceSelector],IBoolean,"0：Off 
+1：On",R/W,IP是否为静态IP,
+,GevPAUSEFrameReception[GevInterfaceSelector],IBoolean,"0：Off 
+1：On",R/W,控制PAUSE帧是否开启,
+,GevCurrentIPAddress[GevInterfaceSelector],IInteger ,ip地址,R,IP地址,
+,GevCurrentSubnetMask[GevInterfaceSelector],IInteger ,子网掩码,R,子网掩码,
+,GevCurrentDefaultGateway[GevInterfaceSelector],IInteger ,默认网关,R,默认网关,
+,GevFirstURL,IString,-,R,XML第一选择路径,
+,GevSecondURL,IString,-,R,XML第二选择路径,
+,GevNumberOfInterfaces,IInteger ,≥0,R,GEV接口数,
+,GevPersistentIPAddress[GevInterfaceSelector],IInteger ,≥0,R/W,静态IP地址,
+,GevPersistentSubnetMask[GevInterfaceSelector],IInteger ,≥0,R/W,静态子网掩码,
+,GevPersistentDefaultGateway[GevInterfaceSelector],IInteger ,≥0,R/W,静态默认网关,
+,GevLinkSpeed,IInteger ,≥0,R,网络速率,
+,GevMessageChannelCount,IInteger ,≥0,R,消息通道数,
+,GevStreamChannelCount,IInteger ,≥0,R,流通道,
+,GevHeartbeatTimeout,IInteger ,≥0,R/W ,心跳超时时间,
+,GevGVCPHeartbeatDisable,IBoolean,"0：Off 
+1：On",R/W ,关闭心跳,
+,GevTimestampTickFrequency,IInteger ,≥0，单位hz,R,时间戳频率,
+,GevTimestampControlLatch,ICommand ,-,W,获取时间戳,
+,GevTimestampControlReset,ICommand ,-,W,复位时间戳,
+,GevTimestampControlLatchReset,ICommand ,-,W,复位时间戳同时获取时间戳,
+,GevTimestampValue,IInteger ,-,R,时间戳值,
+,GevCCP,IEnumeration ,"0：OpenAcess
+1:ExclusiveAccess
+2:ControlAccess",R/W ,App端的控制权限,
+,GevStreamChannelSelector,IInteger ,>=0,R/W ,流通道选择,
+,GevSCPInterfaceIndex[GevStreamChannelSelector],IInteger ,>=0,R/(W),GEV接口索引,
+,GevSCPHostPort[GevStreamChannelSelector],IInteger ,>=0,R/W,主机端口,
+,GevSCPDirectionGevStreamChannelSelector],IInteger ,>=0,R,表明流通道方向,
+,GevSCPSFireTestPacket[GevStreamChannelSelector],IBoolean,"0：Off 
+1：On",R/W ,Fire Test Packet使能,
+,GevSCPSDoNotFragment[GevStreamChannelSelector],IBoolean,"0：Off 
+1：On",R/W ,Fire Test Packet使能,
+,GevSCPSBigEndian[GevStreamChannelSelector],IBoolean,"0：Off 
+1：On",R/W ,流数据大小端,
+,PacketUnorderSupport,IBoolean,"0：Off 
+1：On",R/W ,是否支持GVSP包乱序发送,
+,GevSCPSPacketSize,IInteger,"＞0,与相机相关。一般范围在220-9156，步进为8；",R/(W) ,网络包大小,
+,GevSCPD[GevStreamChannelSelector],IInteger,≥0,R/W ,发包延时,
+,GevSCDA[GevStreamChannelSelector],IInteger,IP地址,R/W ,流数据的目的地址,
+,GevSCSP[GevStreamChannelSelector],IInteger,端口号,R,流数据的源端口,
+,TLParamsLocked,IInteger,"≥0,≤1",R/W,取流时为1,

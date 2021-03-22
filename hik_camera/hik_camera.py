@@ -19,6 +19,10 @@ ip_to_int = lambda ip: sum(
 
 
 class HikCamera(hik.MvCamera):
+    def __init__(self):
+        super().__init__()
+        self.get_setting_df()
+
     high_speed_lock = Lock()
 
     def get_frame(self):
@@ -29,15 +33,111 @@ class HikCamera(hik.MvCamera):
                 self.MV_CC_StartGrabbing()
                 assert not self.MV_CC_GetOneFrameTimeout(
                     byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
-                )
+                ), self.ip
 
             finally:
                 self.MV_CC_StopGrabbing()
                 pass
             h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
-            self.shape = (h, w, self.nPayloadSize // h // w)
-            img = np.array(self.data_buf).copy().reshape(*self.shape)
+            self.bit = bit = self.nPayloadSize * 8 // h // w
+            self.shape = (
+                h,
+                w,
+            )
+            if bit == 8:
+                img = np.array(self.data_buf).copy().reshape(*self.shape)
+            elif bit == 24:
+                self.shape = (h, w, 3)
+                img = np.array(self.data_buf).copy().reshape(*self.shape)
+            elif bit == 16:
+                raw = np.array(self.data_buf).copy().reshape(h, w, 2)
+                img = raw[..., 1].astype(np.uint16) * 256 + raw[..., 0]
+            elif bit == 12:
+                self.shape = h, w
+                arr = np.array(self.data_buf).copy().astype(np.uint16)
+                arr2 = arr[1::3]
+                arrl = (arr[::3] << 4) + ((arr2 & ~np.uint16(15)) >> 4)
+                arrr = (arr[2::3] << 4) + (arr2 & np.uint16(15))
+
+                img = np.concatenate([arrl[..., None], arrr[..., None]], 1).reshape(
+                    self.shape
+                )
             return img
+
+    def get_setting_df(self):
+        csv = boxx.pd.read_csv(__file__.replace("hik_camera.py", "MvCameraNode-CH.csv"))
+        self.setting_df = boxx.pd.DataFrame()
+
+        def to_key(key):
+            if "[" in key:
+                key = key[: key.index("[")]
+            return key.strip()
+
+        def get_depend(key):
+            key = key.strip()
+            if "[" in key:
+                return key[key.index("[") + 1 : -1]
+            return ""
+
+        self.setting_df["key"] = csv[list(csv)[1]].map(to_key)
+        self.setting_df["depend"] = csv[list(csv)[1]].map(get_depend)
+        self.setting_df["dtype"] = csv[list(csv)[2]].map(lambda x: x.strip().lower())
+
+    def getitem(self, key):
+        df = self.setting_df
+        dtype = df[df.key == key]["dtype"].iloc[0]
+        if dtype == "iboolean":
+            get_func = self.MV_CC_GetBoolValue
+            value = ctypes.c_bool()
+        if dtype == "icommand":
+            get_func = self.MV_CC_GetCommandValue
+        if dtype == "ienumeration":
+            get_func = self.MV_CC_GetEnumValue
+            value = ctypes.c_uint32()
+        if dtype == "ifloat":
+            get_func = self.MV_CC_GetFloatValue
+            value = ctypes.c_float()
+        if dtype == "iinteger":
+            get_func = self.MV_CC_GetIntValue
+            value = ctypes.c_int()
+        if dtype == "istring":
+            get_func = self.MV_CC_GetStringValue
+            value = (ctypes.c_char * 50)()
+        if dtype == "register":
+            get_func = self.MV_CC_RegisterEventCallBackEx
+
+        assert not get_func(
+            key, value
+        ), f"{get_func.__name__}('{key}', {value}) not return 0"
+        return value.value
+
+    def setitem(self, key, value):
+        df = self.setting_df
+        dtype = df[df.key == key]["dtype"].iloc[0]
+        if dtype == "iboolean":
+            set_func = self.MV_CC_SetBoolValue
+        if dtype == "icommand":
+            set_func = self.MV_CC_SetCommandValue
+        if dtype == "ienumeration":
+            if isinstance(value, str):
+                set_func = self.MV_CC_SetEnumValueByString
+            else:
+                set_func = self.MV_CC_SetEnumValue
+        if dtype == "ifloat":
+            set_func = self.MV_CC_SetFloatValue
+        if dtype == "iinteger":
+            set_func = self.MV_CC_SetIntValue
+        if dtype == "istring":
+            set_func = self.MV_CC_SetStringValue
+        if dtype == "register":
+            set_func = self.MV_CC_RegisterEventCallBackEx
+
+        assert not set_func(
+            key, value
+        ), f"{set_func.__name__}('{key}', {value}) not return 0"
+
+    __getitem__ = getitem
+    __setitem__ = setitem
 
     def adjust_auto_exposure(self, t=2):
         boxx.sleep(0.1)
@@ -49,13 +149,22 @@ class HikCamera(hik.MvCamera):
         finally:
             self.MV_CC_StopGrabbing()
 
+    pixel_format_values = {
+        "RGB8": 0x02180014,
+        "BayerGB8": 0x0108000A,
+        "BayerGB12": 0x01100012,
+        "BayerGB12Packed": 0x010C002C,
+    }
+
     def setting(self):
-        assert not self.MV_CC_SetEnumValue("PixelFormat", 0x02180014)
+        self.pixel_format = "RGB8"
+        self.pixel_format = "BayerGB12Packed"
+        self.setitem("PixelFormat", self.pixel_format_values[self.pixel_format])
 
         # self.adjust_auto_exposure()
-        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
-        assert not self.MV_CC_SetFloatValue("ExposureTime", 250000)
-        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Continuous")
+        self.setitem("ExposureAuto", "Off")
+        self.setitem("ExposureTime", 250000)
+        self.setitem("ExposureAuto", "Continuous")
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
@@ -140,9 +249,7 @@ class HikCamera(hik.MvCamera):
         self.MV_CC_DestroyHandle()
 
     def get_exposure(self):
-        t = ctypes.c_float()
-        self.MV_CC_GetFloatValue("ExposureTime", t)
-        return t.value
+        return self["ExposureTime"]
 
     def set_exposure(self, t):
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
@@ -189,9 +296,9 @@ if __name__ == "__main__":
         print("imgs = cams.get_frame()")
         boxx.tree - imgs
 
-        cam = cams.get("10.9.5.102", ip)
-        for i in range(3):
+        cam = cams.get("10.9.5.102", cams[ip])
+        for i in range(2):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
-                print("cam.get_exposure", cam.get_exposure())
+                print("cam.get_exposure", cam["ExposureTime"])
             boxx.show - img
