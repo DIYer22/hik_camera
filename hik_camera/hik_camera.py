@@ -9,6 +9,8 @@ from ctypes import byref, POINTER, cast, sizeof, memset
 with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"):
     import MvCameraControl_class as hik
 
+with boxx.inpkg():
+    from .process_raw import RawToRgbUint8
 
 int_to_ip = (
     lambda i: f"{(i & 0xff000000) >> 24}.{(i & 0x00ff0000) >> 16}.{(i & 0x0000ff00) >> 8}.{i & 0x000000ff}"
@@ -255,6 +257,15 @@ class HikCamera(hik.MvCamera):
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
         assert not self.MV_CC_SetFloatValue("ExposureTime", t)
 
+    def raw_to_uint8_rgb_with_pow(self, raw, poww=1):
+        transfer_func = RawToRgbUint8(bit=self.bit, poww=poww)
+        rgb = transfer_func(raw)
+        return rgb
+
+    @property
+    def is_raw(self):
+        return "Bayer" in self.__dict__.get("pixel_format", "RGB8")
+
 
 class MultiHikCamera(dict):
     def __getattr__(self, attr):
@@ -294,11 +305,17 @@ if __name__ == "__main__":
     with cams:
         imgs = cams.get_frame()
         print("imgs = cams.get_frame()")
-        boxx.tree - imgs
+        boxx.tree(imgs)
 
         cam = cams.get("10.9.5.102", cams[ip])
         for i in range(2):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
                 print("cam.get_exposure", cam["ExposureTime"])
-            boxx.show - img
+            boxx.show(img)
+        if cam.is_raw:
+            rgbs = [
+                cam.raw_to_uint8_rgb_with_pow(img, poww=1),
+                cam.raw_to_uint8_rgb_with_pow(img, poww=0.3),
+            ]
+            boxx.show(rgbs)

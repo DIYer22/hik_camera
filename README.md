@@ -25,3 +25,24 @@ python -m hik_camera.hik_camera
 - [ ] 异常重置相机
    - self.MV_CC_SetCommandValue("DeviceReset")
 - [ ] 自研快速自动曝光算法?
+   - 自动曝光 RoI
+- [ ] ~~要不要考虑多帧融合 HDR?~~
+   - 12bit raw 图能同时获得亮暗细节
+
+
+## 图片存储空间
+```bash
+# 对于 12 bit 的 raw12 图, 其不同存储形式的占用空间
+>>> tree-raw12
+└── /: (3036, 4024)uint16
+
+412K	./color.jpg  # uint8
+8.7M	./color.png  # uint8
+14M	./raw.png    # uint16
+15M	./uint16.npz
+18M	./int32.npz
+24M	./uint16.pkl
+47M	./int32.pkl
+```
+
+
