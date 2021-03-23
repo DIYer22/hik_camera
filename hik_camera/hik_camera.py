@@ -30,41 +30,40 @@ class HikCamera(hik.MvCamera):
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
         TIMEOUT_MS = 10000
-        with self.high_speed_lock:
-            try:
-                self.MV_CC_StartGrabbing()
-                assert not self.MV_CC_GetOneFrameTimeout(
-                    byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
-                ), self.ip
+        try:
+            self.MV_CC_StartGrabbing()
+            assert not self.MV_CC_GetOneFrameTimeout(
+                byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
+            ), self.ip
 
-            finally:
-                self.MV_CC_StopGrabbing()
-                pass
-            h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
-            self.bit = bit = self.nPayloadSize * 8 // h // w
-            self.shape = (
-                h,
-                w,
+        finally:
+            self.MV_CC_StopGrabbing()
+            pass
+        h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
+        self.bit = bit = self.nPayloadSize * 8 // h // w
+        self.shape = (
+            h,
+            w,
+        )
+        if bit == 8:
+            img = np.array(self.data_buf).copy().reshape(*self.shape)
+        elif bit == 24:
+            self.shape = (h, w, 3)
+            img = np.array(self.data_buf).copy().reshape(*self.shape)
+        elif bit == 16:
+            raw = np.array(self.data_buf).copy().reshape(h, w, 2)
+            img = raw[..., 1].astype(np.uint16) * 256 + raw[..., 0]
+        elif bit == 12:
+            self.shape = h, w
+            arr = np.array(self.data_buf).copy().astype(np.uint16)
+            arr2 = arr[1::3]
+            arrl = (arr[::3] << 4) + ((arr2 & ~np.uint16(15)) >> 4)
+            arrr = (arr[2::3] << 4) + (arr2 & np.uint16(15))
+
+            img = np.concatenate([arrl[..., None], arrr[..., None]], 1).reshape(
+                self.shape
             )
-            if bit == 8:
-                img = np.array(self.data_buf).copy().reshape(*self.shape)
-            elif bit == 24:
-                self.shape = (h, w, 3)
-                img = np.array(self.data_buf).copy().reshape(*self.shape)
-            elif bit == 16:
-                raw = np.array(self.data_buf).copy().reshape(h, w, 2)
-                img = raw[..., 1].astype(np.uint16) * 256 + raw[..., 0]
-            elif bit == 12:
-                self.shape = h, w
-                arr = np.array(self.data_buf).copy().astype(np.uint16)
-                arr2 = arr[1::3]
-                arrl = (arr[::3] << 4) + ((arr2 & ~np.uint16(15)) >> 4)
-                arrr = (arr[2::3] << 4) + (arr2 & np.uint16(15))
-
-                img = np.concatenate([arrl[..., None], arrr[..., None]], 1).reshape(
-                    self.shape
-                )
-            return img
+        return img
 
     def get_setting_df(self):
         csv = boxx.pd.read_csv(__file__.replace("hik_camera.py", "MvCameraNode-CH.csv"))
@@ -159,14 +158,16 @@ class HikCamera(hik.MvCamera):
     }
 
     def setting(self):
-        self.pixel_format = "RGB8"
-        self.pixel_format = "BayerGB12Packed"
-        self.setitem("PixelFormat", self.pixel_format_values[self.pixel_format])
-
         # self.adjust_auto_exposure()
         self.setitem("ExposureAuto", "Off")
         self.setitem("ExposureTime", 250000)
         self.setitem("ExposureAuto", "Continuous")
+
+        self.pixel_format = "RGB8"
+        self.pixel_format = "BayerGB12Packed"
+        self.setitem("PixelFormat", self.pixel_format_values[self.pixel_format])
+
+        self.setitem("GevSCPD", 2000)  # 包延时 ns
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
@@ -257,8 +258,10 @@ class HikCamera(hik.MvCamera):
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
         assert not self.MV_CC_SetFloatValue("ExposureTime", t)
 
-    def raw_to_uint8_rgb_with_pow(self, raw, poww=1):
-        transfer_func = RawToRgbUint8(bit=self.bit, poww=poww)
+    def raw_to_uint8_rgb(self, raw, poww=1, demosaicing_method="Malvar2004"):
+        transfer_func = RawToRgbUint8(
+            bit=self.bit, poww=poww, demosaicing_method=demosaicing_method
+        )
         rgb = transfer_func(raw)
         return rgb
 
@@ -280,7 +283,7 @@ class MultiHikCamera(dict):
                 thread = Timer(0, _func, (ip, cam))
                 thread.start()
                 threads.append(thread)
-                thread.join()
+                # thread.join()
             [thread.join() for thread in threads]
             res = {ip: res[ip] for ip in sorted(res)}
             return res
@@ -302,12 +305,16 @@ if __name__ == "__main__":
     print(ips)
     ip = list(ips)[0]
     cams = HikCamera.get_all_cams()
+    cam = cams.get("10.9.5.102", cams[ip])
     with cams:
-        imgs = cams.get_frame()
+        with boxx.timeit("get_frame"):
+            imgs = cams.get_frame()
         print("imgs = cams.get_frame()")
         boxx.tree(imgs)
+        # rgbs = [cam.raw_to_uint8_rgb(raw, poww=.3, demosaicing_method="simple") for raw in imgs.values()]
+        # normas = [norma(img) for img in imgs.values()]
+        # shows-[normas, rgbs]
 
-        cam = cams.get("10.9.5.102", cams[ip])
         for i in range(2):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
@@ -315,7 +322,7 @@ if __name__ == "__main__":
             boxx.show(img)
         if cam.is_raw:
             rgbs = [
-                cam.raw_to_uint8_rgb_with_pow(img, poww=1),
-                cam.raw_to_uint8_rgb_with_pow(img, poww=0.3),
+                cam.raw_to_uint8_rgb(img, poww=1),
+                cam.raw_to_uint8_rgb(img, poww=0.3),
             ]
             boxx.show(rgbs)
