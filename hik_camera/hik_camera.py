@@ -61,7 +61,7 @@ class HikCamera(hik.MvCamera):
         self._ip = ip
         self.host_ip = host_ip
         # self.init_by_ip()
-        self.init_by_enum()
+        self._init_by_enum()
 
     def setting(self):
         self.set_exposure(250000)
@@ -73,48 +73,6 @@ class HikCamera(hik.MvCamera):
         self.setitem("PixelFormat", self.pixel_format)
 
         self.setitem("GevSCPD", 2000)  # 包延时 ns
-
-    def init_by_spec_ip(self,):
-        """
-        SDK 有 Bug, 调用完"枚举设备" 接口后, 再调用"无枚举连接相机" 会无法打开相机.
-        暂时不能用
-        """
-        stDevInfo = hik.MV_CC_DEVICE_INFO()
-        stGigEDev = hik.MV_GIGE_DEVICE_INFO()
-
-        stGigEDev.nCurrentIp = ip_to_int(self.ip)
-        stGigEDev.nNetExport = ip_to_int(self.host_ip)
-        stDevInfo.nTLayerType = hik.MV_GIGE_DEVICE
-        stDevInfo.SpecialInfo.stGigEInfo = stGigEDev
-        assert not self.MV_CC_CreateHandle(stDevInfo)
-
-    def init_by_enum(self):
-        stDevInfo = self.get_dev_info(self.ip)
-        assert not self.MV_CC_CreateHandle(stDevInfo)
-
-    @classmethod
-    def get_dev_info(cls, ip=None):
-        if not hasattr(cls, "ip_to_dev_info"):
-            ip_to_dev_info = {}
-            deviceList = hik.MV_CC_DEVICE_INFO_LIST()
-            tlayerType = hik.MV_GIGE_DEVICE  # | MV_USB_DEVICE
-            assert not hik.MvCamera.MV_CC_EnumDevices(tlayerType, deviceList)
-            for i in range(0, deviceList.nDeviceNum):
-                mvcc_dev_info = cast(
-                    deviceList.pDeviceInfo[i], POINTER(hik.MV_CC_DEVICE_INFO)
-                ).contents
-                _ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
-                if mvcc_dev_info.nTLayerType == hik.MV_GIGE_DEVICE:
-                    ip_to_dev_info[_ip] = mvcc_dev_info
-            cls.ip_to_dev_info = {
-                ip: ip_to_dev_info[ip] for ip in sorted(ip_to_dev_info)
-            }
-        if ip is None:
-            return cls.ip_to_dev_info
-        return cls.ip_to_dev_info[ip]
-
-    high_speed_lock = Lock()
-    setting_df = get_setting_df()
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
@@ -153,6 +111,105 @@ class HikCamera(hik.MvCamera):
                 self.shape
             )
         return img
+
+    @classmethod
+    def get_all_ips(cls):
+        ip_to_dev_info = cls._get_dev_info()
+        return sorted(ip_to_dev_info)
+
+    @classmethod
+    def get_cams(cls, ips=None):
+        if ips is None:
+            ips = cls.get_all_ips()
+        else:
+            ips = sorted(ips)
+        cams = MultiHikCamera({ip: cls(ip) for ip in ips})
+        return cams
+
+    get_all_cams = get_cams
+
+    def get_exposure(self):
+        return self["ExposureTime"]
+
+    def set_exposure(self, t):
+        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
+        assert not self.MV_CC_SetFloatValue("ExposureTime", t)
+
+    def adjust_auto_exposure(self, t=2):
+        boxx.sleep(0.1)
+        try:
+            self.MV_CC_StartGrabbing()
+            print("before_exposure", self.get_exposure())
+            boxx.sleep(t)
+            print("after_exposure", self.get_exposure())
+        finally:
+            self.MV_CC_StopGrabbing()
+
+    def get_shape(self):
+        if not hasattr(self, "shape"):
+            self.get_frame()
+        return self.shape
+
+    @property
+    def is_raw(self):
+        return "Bayer" in self.__dict__.get("pixel_format", "RGB8")
+
+    @property
+    def ip(self):
+        if not hasattr(self, "_ip"):
+            self._ip = self.getitem("GevCurrentIPAddress")
+        return self._ip
+
+    def raw_to_uint8_rgb(self, raw, poww=1, demosaicing_method="Malvar2004"):
+        transfer_func = RawToRgbUint8(
+            bit=self.bit, poww=poww, demosaicing_method=demosaicing_method
+        )
+        rgb = transfer_func(raw)
+        return rgb
+
+    def __enter__(self):
+        assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
+
+        # assert not self.MV_CC_SetCommandValue("DeviceReset")
+        # sleep(5)
+        # assert not super().MV_CC_CreateHandle(self.mvcc_dev_info)
+        # assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
+
+        self.setting()
+
+        stParam = hik.MVCC_INTVALUE()
+        memset(byref(stParam), 0, sizeof(hik.MVCC_INTVALUE))
+
+        assert not self.MV_CC_GetIntValue("PayloadSize", stParam)
+        self.nPayloadSize = stParam.nCurValue
+        self.data_buf = (ctypes.c_ubyte * self.nPayloadSize)()
+
+        # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
+        with self.high_speed_lock:
+            nPacketSize = self.MV_CC_GetOptimalPacketSize()
+        assert nPacketSize
+        assert not self.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
+
+        self.stFrameInfo = hik.MV_FRAME_OUT_INFO_EX()
+        memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
+
+        assert not self.MV_CC_SetEnumValue("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
+
+        return self
+
+    def __exit__(self, *l):
+        self.MV_CC_CloseDevice()
+
+    def __del__(self):
+        self.MV_CC_DestroyHandle()
+
+    def MV_CC_CreateHandle(self, mvcc_dev_info):
+        self.mvcc_dev_info = mvcc_dev_info
+        self._ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
+        assert not super().MV_CC_CreateHandle(mvcc_dev_info)
+
+    high_speed_lock = Lock()
+    setting_df = get_setting_df()
 
     def getitem(self, key):
         df = self.setting_df
@@ -210,101 +267,44 @@ class HikCamera(hik.MvCamera):
     __getitem__ = getitem
     __setitem__ = setitem
 
-    def adjust_auto_exposure(self, t=2):
-        boxx.sleep(0.1)
-        try:
-            self.MV_CC_StartGrabbing()
-            print("before_exposure", self.get_exposure())
-            boxx.sleep(t)
-            print("after_exposure", self.get_exposure())
-        finally:
-            self.MV_CC_StopGrabbing()
+    def _init_by_spec_ip(self):
+        """
+        SDK 有 Bug, 调用完"枚举设备" 接口后, 再调用"无枚举连接相机" 会无法打开相机.
+        暂时不能用
+        """
+        stDevInfo = hik.MV_CC_DEVICE_INFO()
+        stGigEDev = hik.MV_GIGE_DEVICE_INFO()
 
-    def __enter__(self):
-        assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
+        stGigEDev.nCurrentIp = ip_to_int(self.ip)
+        stGigEDev.nNetExport = ip_to_int(self.host_ip)
+        stDevInfo.nTLayerType = hik.MV_GIGE_DEVICE
+        stDevInfo.SpecialInfo.stGigEInfo = stGigEDev
+        assert not self.MV_CC_CreateHandle(stDevInfo)
 
-        # assert not self.MV_CC_SetCommandValue("DeviceReset")
-        # sleep(5)
-        # assert not super().MV_CC_CreateHandle(self.mvcc_dev_info)
-        # assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
-
-        self.setting()
-
-        stParam = hik.MVCC_INTVALUE()
-        memset(byref(stParam), 0, sizeof(hik.MVCC_INTVALUE))
-
-        assert not self.MV_CC_GetIntValue("PayloadSize", stParam)
-        self.nPayloadSize = stParam.nCurValue
-        self.data_buf = (ctypes.c_ubyte * self.nPayloadSize)()
-
-        # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
-        with self.high_speed_lock:
-            nPacketSize = self.MV_CC_GetOptimalPacketSize()
-        assert nPacketSize
-        assert not self.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
-
-        self.stFrameInfo = hik.MV_FRAME_OUT_INFO_EX()
-        memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
-
-        assert not self.MV_CC_SetEnumValue("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
-
-        return self
-
-    def get_shape(self):
-        if not hasattr(self, "shape"):
-            self.get_frame()
-        return self.shape
-
-    def __exit__(self, *l):
-        self.MV_CC_CloseDevice()
+    def _init_by_enum(self):
+        stDevInfo = self._get_dev_info(self.ip)
+        assert not self.MV_CC_CreateHandle(stDevInfo)
 
     @classmethod
-    def get_all_ips(cls):
-        ip_to_dev_info = cls.get_dev_info()
-        return sorted(ip_to_dev_info)
-
-    @classmethod
-    def get_cams(cls, ips=None):
-        if ips is None:
-            ips = cls.get_all_ips()
-        else:
-            ips = sorted(ips)
-        cams = MultiHikCamera({ip: cls(ip) for ip in ips})
-        return cams
-
-    get_all_cams = get_cams
-
-    def MV_CC_CreateHandle(self, mvcc_dev_info):
-        self.mvcc_dev_info = mvcc_dev_info
-        self._ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
-        assert not super().MV_CC_CreateHandle(mvcc_dev_info)
-
-    def __del__(self):
-        self.MV_CC_DestroyHandle()
-
-    def get_exposure(self):
-        return self["ExposureTime"]
-
-    def set_exposure(self, t):
-        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
-        assert not self.MV_CC_SetFloatValue("ExposureTime", t)
-
-    def raw_to_uint8_rgb(self, raw, poww=1, demosaicing_method="Malvar2004"):
-        transfer_func = RawToRgbUint8(
-            bit=self.bit, poww=poww, demosaicing_method=demosaicing_method
-        )
-        rgb = transfer_func(raw)
-        return rgb
-
-    @property
-    def is_raw(self):
-        return "Bayer" in self.__dict__.get("pixel_format", "RGB8")
-
-    @property
-    def ip(self):
-        if not hasattr(self, "_ip"):
-            self._ip = self.getitem("GevCurrentIPAddress")
-        return self._ip
+    def _get_dev_info(cls, ip=None):
+        if not hasattr(cls, "ip_to_dev_info"):
+            ip_to_dev_info = {}
+            deviceList = hik.MV_CC_DEVICE_INFO_LIST()
+            tlayerType = hik.MV_GIGE_DEVICE  # | MV_USB_DEVICE
+            assert not hik.MvCamera.MV_CC_EnumDevices(tlayerType, deviceList)
+            for i in range(0, deviceList.nDeviceNum):
+                mvcc_dev_info = cast(
+                    deviceList.pDeviceInfo[i], POINTER(hik.MV_CC_DEVICE_INFO)
+                ).contents
+                _ip = int_to_ip(mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp)
+                if mvcc_dev_info.nTLayerType == hik.MV_GIGE_DEVICE:
+                    ip_to_dev_info[_ip] = mvcc_dev_info
+            cls.ip_to_dev_info = {
+                ip: ip_to_dev_info[ip] for ip in sorted(ip_to_dev_info)
+            }
+        if ip is None:
+            return cls.ip_to_dev_info
+        return cls.ip_to_dev_info[ip]
 
 
 class MultiHikCamera(dict):
