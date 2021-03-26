@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import boxx
+from boxx import *
 import numpy as np
-from threading import Lock, Timer
+from threading import Lock, Thread
 import ctypes
 from ctypes import byref, POINTER, cast, sizeof, memset
 
@@ -53,6 +54,7 @@ def get_setting_df():
 class HikCamera(hik.MvCamera):
     def __init__(self, ip=None, host_ip=None):
         super().__init__()
+        self.lock = Lock()
         if ip is None:
             return
             ip = self.get_all_ips()[0]
@@ -73,25 +75,26 @@ class HikCamera(hik.MvCamera):
         self.setitem("PixelFormat", self.pixel_format)
 
         self.setitem("GevSCPD", 2000)  # 包延时 ns
+        self.setitem("AcquisitionFrameRateEnable", False)
+        self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_ON)
+        self.setitem("TriggerSource", hik.MV_TRIGGER_SOURCE_SOFTWARE)
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
         TIMEOUT_MS = 10000
         try:
-            self.MV_CC_StartGrabbing()
-            assert not self.MV_CC_GetOneFrameTimeout(
-                byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
-            ), self.ip
+            with self.lock:
+                assert not self.MV_CC_SetCommandValue("TriggerSoftware")
+                assert not self.MV_CC_GetOneFrameTimeout(
+                    byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
+                ), self.ip
 
         finally:
-            self.MV_CC_StopGrabbing()
             pass
+
         h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
         self.bit = bit = self.nPayloadSize * 8 // h // w
-        self.shape = (
-            h,
-            w,
-        )
+        self.shape = h, w
         if bit == 8:
             img = np.array(self.data_buf).copy().reshape(*self.shape)
         elif bit == 24:
@@ -193,11 +196,11 @@ class HikCamera(hik.MvCamera):
         self.stFrameInfo = hik.MV_FRAME_OUT_INFO_EX()
         memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
 
-        assert not self.MV_CC_SetEnumValue("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
-
+        assert not self.MV_CC_StartGrabbing()
         return self
 
     def __exit__(self, *l):
+        assert not self.MV_CC_StopGrabbing()
         self.MV_CC_CloseDevice()
 
     def __del__(self):
@@ -320,7 +323,7 @@ class MultiHikCamera(dict):
                 res[ip] = getattr(cam, attr)(*args, **kwargs)
 
             for ip, cam in self.items():
-                thread = Timer(0, _func, (ip, cam))
+                thread = Thread(target=_func, args=(ip, cam))
                 thread.start()
                 threads.append(thread)
                 # thread.join()
@@ -339,7 +342,6 @@ class MultiHikCamera(dict):
 
 
 if __name__ == "__main__":
-    from boxx import *
 
     ips = HikCamera.get_all_ips()
     print(ips)
