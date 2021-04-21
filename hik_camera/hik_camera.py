@@ -64,6 +64,7 @@ class HikCamera(hik.MvCamera):
         self.host_ip = host_ip
         # self.init_by_ip()
         self._init_by_enum()
+        self.TIMEOUT_MS = 40000
 
     def setting(self):
         self.set_exposure(250000)
@@ -74,19 +75,19 @@ class HikCamera(hik.MvCamera):
         self.pixel_format = "BayerGB12Packed"
         self.setitem("PixelFormat", self.pixel_format)
 
-        self.setitem("GevSCPD", 2000)  # 包延时 ns
-        self.setitem("AcquisitionFrameRateEnable", False)
-        self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_ON)
-        self.setitem("TriggerSource", hik.MV_TRIGGER_SOURCE_SOFTWARE)
+        self.setitem("GevSCPD", 200)  # 包延时 ns
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
-        TIMEOUT_MS = 10000
+
         try:
             with self.lock:
                 assert not self.MV_CC_SetCommandValue("TriggerSoftware")
                 assert not self.MV_CC_GetOneFrameTimeout(
-                    byref(self.data_buf), self.nPayloadSize, stFrameInfo, TIMEOUT_MS
+                    byref(self.data_buf),
+                    self.nPayloadSize,
+                    stFrameInfo,
+                    self.TIMEOUT_MS,
                 ), self.ip
 
         finally:
@@ -178,6 +179,9 @@ class HikCamera(hik.MvCamera):
         # assert not super().MV_CC_CreateHandle(self.mvcc_dev_info)
         # assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
 
+        self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_ON)
+        self.setitem("TriggerSource", hik.MV_TRIGGER_SOURCE_SOFTWARE)
+        self.setitem("AcquisitionFrameRateEnable", False)
         self.setting()
 
         stParam = hik.MVCC_INTVALUE()
@@ -349,10 +353,12 @@ if __name__ == "__main__":
 
     cam = HikCamera(ip)
     with cam:
+        print(cam["ExposureTime"])
         for i in range(2):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
                 print("cam.get_exposure", cam["ExposureTime"])
+        # print(cam["PixelFormat"])
         if cam.is_raw:
             rgbs = [
                 cam.raw_to_uint8_rgb(img, poww=1),
