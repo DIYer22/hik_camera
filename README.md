@@ -26,7 +26,8 @@ python -m hik_camera.hik_camera
    - self.MV_CC_SetCommandValue("DeviceReset")
 - [ ] 自研快速自动曝光算法?
    - 自动曝光 RoI
-- [ ] ~~要不要考虑多帧融合 HDR?~~
+- [ ] 了解 rawpy 的 rgb=re['raw_obj'].postprocess(), 尝试加速转换为 RGB
+- [x] ~~要不要考虑多帧融合 HDR?~~
    - 12bit raw 图能同时获得亮暗细节
 
 

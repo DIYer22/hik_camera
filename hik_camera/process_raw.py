@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import boxx
 import numpy as np
 
@@ -64,19 +65,91 @@ class RawToRgbUint8:
             -1,
         )
 
+    @staticmethod
+    def test(raw=None):
+        if raw is None:
+            raw = boxx.imread("../tmp_BayerGB12Packed.png")
+        with boxx.timeit("demosaicing_method: simple"):
+            rgb1 = RawToRgbUint8(demosaicing_method="simple")(raw)
+        with boxx.timeit("demosaicing_method: Malvar2004"):
+            rgb2 = RawToRgbUint8()(raw)
+        with boxx.timeit("demosaicing_method: Malvar2004 pow 0.3"):
+            rgb3 = RawToRgbUint8(poww=0.3)(raw)
+        imgs = boxx.tree / [boxx.norma(raw), rgb1, rgb2, rgb3]
+
+        boxx.shows(imgs, png=True)
+        boxx.g()
+
+
+class DngFileformat:
+    @staticmethod
+    def save_dng(dng_path, raw, bit=12, bayer_pattern="GBRG", compress=False):
+        try:
+            from pydng.core import RAW2DNG, DNGTags, Tag
+        except ModuleNotFoundError as e:
+            boxx.pred(
+                "Please install PyDng by pip install git+https://github.com/schoolpost/PyDNG.git#subdirectory=src&egg=pydng"
+            )
+            raise e
+
+        assert raw.dtype in (np.uint16, np.uint8)
+        height, width = raw.shape
+
+        CFAPattern = ["RGB".index(c) for c in bayer_pattern]
+
+        # set DNG tags.
+        t = DNGTags()
+        t.set(Tag.ImageWidth, width)
+        t.set(Tag.ImageLength, height)
+        t.set(Tag.BitsPerSample, bit)
+        t.set(Tag.CFARepeatPatternDim, [2, 2])
+        t.set(Tag.CFAPattern, CFAPattern)
+        t.set(Tag.BlackLevel, (4096 >> (16 - bit)))
+        t.set(Tag.WhiteLevel, ((1 << bit) - 1))
+        t.set(Tag.DNGVersion, [1, 4, 0, 0])
+        t.set(Tag.PhotometricInterpretation, 32803)
+        t.set(Tag.PreviewColorSpace, 2)
+
+        RAW2DNG().convert(
+            raw,
+            tags=t,
+            filename=boxx.filename(dng_path),
+            path=boxx.dirname(dng_path) + "/",
+            compress=compress,
+        )
+        # compress = True lossless for bayer, 29MB => 19 MB
+
+    @staticmethod
+    def read_dng(dng_path):
+        import rawpy
+
+        raw_obj = rawpy.imread(dng_path)
+        bayer_pattern = "".join(
+            [chr(raw_obj.color_desc[i]) for i in raw_obj.raw_pattern.flatten()]
+        )
+        raw = raw_obj.raw_image
+        bit = int(np.log2(raw_obj.white_level + 1))
+        # TODO %time rgb=re['raw_obj'].postprocess()
+        return dict(raw=raw, bayer_pattern=bayer_pattern, bit=bit, raw_obj=raw_obj)
+
+    @staticmethod
+    def test(raw=None):
+        if raw is None:
+            raw = boxx.imread("../tmp_BayerGB12Packed.png")
+        dngp = "../raw.dng"
+        DngFileformat.save_dng(dngp, raw)
+        re = DngFileformat.read_dng(dngp)
+        raw2 = re["raw"]
+        os.system(f"ls -lh {dngp}")
+        boxx.showb(dngp)
+        assert (raw2 == raw).all()
+        boxx.g()
+
 
 if __name__ == "__main__":
     from boxx import *
 
-    raw_png = "/home/dl/junk/raw_img/raw12-test3.png"
+    raw_png = "../tmp_BayerGB12Packed.png"
     raw = boxx.imread(raw_png)
 
-    with boxx.timeit("demosaicing_method: simple"):
-        rgb1 = RawToRgbUint8(demosaicing_method="simple")(raw)
-    with boxx.timeit("demosaicing_method: Malvar2004"):
-        rgb2 = RawToRgbUint8()(raw)
-    with boxx.timeit("demosaicing_method: Malvar2004 pow 0.3"):
-        rgb3 = RawToRgbUint8(poww=0.3)(raw)
-    imgs = boxx.tree / [boxx.norma(raw), rgb1, rgb2, rgb3]
-
-    boxx.shows(imgs, png=True)
+    DngFileformat.test(raw)

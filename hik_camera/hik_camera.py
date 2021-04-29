@@ -7,11 +7,13 @@ from threading import Lock, Thread
 import ctypes
 from ctypes import byref, POINTER, cast, sizeof, memset
 
-with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"):
+with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"), boxx.impt(
+    r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
+):
     import MvCameraControl_class as hik
 
 with boxx.inpkg():
-    from .process_raw import RawToRgbUint8
+    from .process_raw import RawToRgbUint8, DngFileformat
 
 int_to_ip = (
     lambda i: f"{(i & 0xff000000) >> 24}.{(i & 0x00ff0000) >> 16}.{(i & 0x0000ff00) >> 8}.{i & 0x000000ff}"
@@ -71,9 +73,9 @@ class HikCamera(hik.MvCamera):
         self.setitem("ExposureAuto", "Continuous")
         # self.adjust_auto_exposure()
 
-        self.pixel_format = "RGB8"
-        self.pixel_format = "BayerGB12Packed"
-        self.setitem("PixelFormat", self.pixel_format)
+        # self.pixel_format = "RGB8Packed"
+        # self.setitem("PixelFormat", self.pixel_format)
+        self.set_raw()
 
         self.setitem("GevSCPD", 200)  # 包延时 ns
 
@@ -139,6 +141,14 @@ class HikCamera(hik.MvCamera):
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
         assert not self.MV_CC_SetFloatValue("ExposureTime", t)
 
+    def set_raw(self):
+        try:
+            self.pixel_format = "BayerGB12Packed"
+            self.setitem("PixelFormat", self.pixel_format)
+        except AssertionError:
+            self.pixel_format = "BayerGR12Packed"
+            self.setitem("PixelFormat", self.pixel_format)
+
     def adjust_auto_exposure(self, t=2):
         boxx.sleep(0.1)
         try:
@@ -170,6 +180,25 @@ class HikCamera(hik.MvCamera):
         )
         rgb = transfer_func(raw)
         return rgb
+
+    def save_raw(self, raw, dng_path, compress=False):
+        bayer_pattern = self.get_bayer_pattern()
+        DngFileformat.save_dng(
+            dng_path, raw, bit=self.bit, bayer_pattern=bayer_pattern, compress=compress
+        )
+        return dng_path
+
+    def save(self, img, path=""):
+        if self.is_raw:
+            return self.save_raw(img, path or f"/tmp/{self.ip}.dng")
+        return boxx.imsave(img, path or f"/tmp/{self.ip}.jpg")
+
+    def get_bayer_pattern(self):
+        assert self.is_raw
+        if "BayerGB" in self.pixel_format:
+            return "GBRG"
+        elif "BayerGR" in self.pixel_format:
+            return "GRBG"
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
@@ -240,7 +269,7 @@ class HikCamera(hik.MvCamera):
             value = (ctypes.c_char * 50)()
         if dtype == "register":
             get_func = self.MV_CC_RegisterEventCallBackEx
-
+        # print(get_func, value)
         assert not get_func(
             key, value
         ), f"{get_func.__name__}('{key}', {value}) not return 0"
@@ -348,24 +377,23 @@ class MultiHikCamera(dict):
 if __name__ == "__main__":
 
     ips = HikCamera.get_all_ips()
-    print(ips)
+    print("All camera IP adresses:", ips)
     ip = list(ips)[0]
 
     cam = HikCamera(ip)
     with cam:
-        print(cam["ExposureTime"])
         for i in range(2):
             with boxx.timeit("cam.get_frame"):
                 img = cam.get_frame()
                 print("cam.get_exposure", cam["ExposureTime"])
-        # print(cam["PixelFormat"])
+        print("Saveing image to:", cam.save(img))
         if cam.is_raw:
             rgbs = [
                 cam.raw_to_uint8_rgb(img, poww=1),
                 cam.raw_to_uint8_rgb(img, poww=0.3),
             ]
             boxx.show(rgbs)
-
+    print("-" * 40)
     cams = HikCamera.get_all_cams()
     with cams:
         with boxx.timeit("cams.get_frame"):
