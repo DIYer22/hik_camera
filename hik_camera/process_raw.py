@@ -83,7 +83,9 @@ class RawToRgbUint8:
 
 class DngFileformat:
     @staticmethod
-    def save_dng(dng_path, raw, bit=12, bayer_pattern="GBRG", compress=False):
+    def save_dng(
+        dng_path, raw, bit=12, bayer_pattern="GBRG", compress=False, Orientation=1
+    ):
         try:
             from pydng.core import RAW2DNG, DNGTags, Tag
         except ModuleNotFoundError as e:
@@ -109,6 +111,7 @@ class DngFileformat:
         t.set(Tag.DNGVersion, [1, 4, 0, 0])
         t.set(Tag.PhotometricInterpretation, 32803)
         t.set(Tag.PreviewColorSpace, 2)
+        t.set(Tag.Orientation, Orientation)
 
         RAW2DNG().convert(
             raw,
