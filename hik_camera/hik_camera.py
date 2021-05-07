@@ -176,7 +176,10 @@ class HikCamera(hik.MvCamera):
 
     def raw_to_uint8_rgb(self, raw, poww=1, demosaicing_method="Malvar2004"):
         transfer_func = RawToRgbUint8(
-            bit=self.bit, poww=poww, demosaicing_method=demosaicing_method
+            bit=self.bit,
+            poww=poww,
+            demosaicing_method=demosaicing_method,
+            pattern=self.get_bayer_pattern(),
         )
         rgb = transfer_func(raw)
         return rgb
