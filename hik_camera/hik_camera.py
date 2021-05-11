@@ -69,15 +69,15 @@ class HikCamera(hik.MvCamera):
         self.TIMEOUT_MS = 40000
 
     def setting(self):
-        self.set_exposure(250000)
+        # 设置自动曝光
         self.setitem("ExposureAuto", "Continuous")
-        # self.adjust_auto_exposure()
+        # 取 RGB 图
+        self.pixel_format = "RGB8Packed"
+        self.setitem("PixelFormat", self.pixel_format)
 
-        # self.pixel_format = "RGB8Packed"
-        # self.setitem("PixelFormat", self.pixel_format)
-        self.set_raw()
-
-        self.setitem("GevSCPD", 200)  # 包延时 ns
+        # self.set_raw() # 取 raw 图
+        # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns
+        # self.set_OptimalPacketSize()  # 最优包大小
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
@@ -194,7 +194,9 @@ class HikCamera(hik.MvCamera):
     def save(self, img, path=""):
         if self.is_raw:
             return self.save_raw(img, path or f"/tmp/{self.ip}.dng")
-        return boxx.imsave(img, path or f"/tmp/{self.ip}.jpg")
+        path = path or f"/tmp/{self.ip}.jpg"
+        boxx.imsave(path, img)
+        return path
 
     def get_bayer_pattern(self):
         assert self.is_raw
@@ -223,19 +225,23 @@ class HikCamera(hik.MvCamera):
         self.nPayloadSize = stParam.nCurValue
         self.data_buf = (ctypes.c_ubyte * self.nPayloadSize)()
 
-        # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
-        with self.high_speed_lock:
-            nPacketSize = self.MV_CC_GetOptimalPacketSize()
-        assert nPacketSize
-        assert not self.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
-
         self.stFrameInfo = hik.MV_FRAME_OUT_INFO_EX()
         memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
 
         assert not self.MV_CC_StartGrabbing()
         return self
 
+    def set_OptimalPacketSize(self):
+        # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
+        # print("GevSCPSPacketSize", self["GevSCPSPacketSize"])
+        with self.high_speed_lock:
+            nPacketSize = self.MV_CC_GetOptimalPacketSize()
+        assert nPacketSize
+        assert not self.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
+
     def __exit__(self, *l):
+        self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_OFF)
+        self.setitem("AcquisitionFrameRateEnable", True)
         assert not self.MV_CC_StopGrabbing()
         self.MV_CC_CloseDevice()
 
@@ -345,6 +351,30 @@ class HikCamera(hik.MvCamera):
             return cls.ip_to_dev_info
         return cls.ip_to_dev_info[ip]
 
+    @classmethod
+    def test_raw(cls):
+        class RawCam(cls):
+            def setting(self):
+                super().setting()
+                self.set_raw()
+
+        cam = RawCam.get_cam()
+        with cam:
+            raw = cam.get_frame()
+            if cam.is_raw:
+                rgbs = [
+                    cam.raw_to_uint8_rgb(raw, poww=1),
+                    cam.raw_to_uint8_rgb(raw, poww=0.3),
+                ]
+                boxx.show(rgbs)
+        boxx.g()
+
+    @classmethod
+    def get_cam(cls):
+        ips = cls.get_all_ips()
+        cam = cls(ips[0])
+        return cam
+
 
 class MultiHikCamera(dict):
     def __getattr__(self, attr):
@@ -381,25 +411,17 @@ if __name__ == "__main__":
 
     ips = HikCamera.get_all_ips()
     print("All camera IP adresses:", ips)
-    ip = list(ips)[0]
-
+    ip = ips[0]
     cam = HikCamera(ip)
-    with cam:
-        for i in range(2):
-            with boxx.timeit("cam.get_frame"):
-                img = cam.get_frame()
-                print("cam.get_exposure", cam["ExposureTime"])
+    # cam.test_raw()
+    with cam, boxx.timeit("cam.get_frame"):
+        img = cam.get_frame()
         print("Saveing image to:", cam.save(img))
-        if cam.is_raw:
-            rgbs = [
-                cam.raw_to_uint8_rgb(img, poww=1),
-                cam.raw_to_uint8_rgb(img, poww=0.3),
-            ]
-            boxx.show(rgbs)
+
     print("-" * 40)
+
     cams = HikCamera.get_all_cams()
-    with cams:
-        with boxx.timeit("cams.get_frame"):
-            imgs = cams.get_frame()
+    with cams, boxx.timeit("cams.get_frame"):
+        imgs = cams.get_frame()
         print("imgs = cams.get_frame()")
         boxx.tree(imgs)
