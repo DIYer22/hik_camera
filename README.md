@@ -1,5 +1,9 @@
 # 海康网口相机控制库
-封装海康网口相机 SDK, 使得易于使用
+封装海康网口相机 SDK, 使得易于使用. 支持 Linux 和 Windows
+
+## 安装
+1. 可直接 build docker
+2. 可以参考 [Dockerfile](Dockerfile), 一步一步手动安装
 
 Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py)  的 "\_\_main\_\_"
 ```bash
@@ -7,14 +11,12 @@ Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py)  的 "\_\_m
 python -m hik_camera.hik_camera
 ```
 
-
-
 ## Tips
-1. sdk目录位于 `/opt/MVS`
-2. `/opt/MVS/doc`包含详细sdk接口说明
+1. SDK目录位于 `/opt/MVS`
+2. `/opt/MVS/doc`包含详细SDK接口说明
    .xlsx为相机可选参数说明
 3. `/opt/MVS/doc/samples`包含代码示例
-4. 例如python/MvImport/MvCameraControl_class.py包含Python可调class.(根据需要可按照c代码重构).
+4. 例如  `python/MvImport/MvCameraControl_class.py` 包含Python可调class.(根据需要可按照c代码重构).
 5. 相机只缓存设置相关内容.图片缓存在MVS的SDK中,代码运行需要开辟内存空间,注意调用后释放,避免内存泄露.
 6. 使用 `python -m hik_camera.bandwidth` 监控网口流量.可选参数:
    + 刷新时间time.
@@ -26,9 +28,11 @@ python -m hik_camera.hik_camera
    - self.MV_CC_SetCommandValue("DeviceReset")
 - [ ] 自研快速自动曝光算法?
    - 自动曝光 RoI
-- [ ] 了解 rawpy 的 rgb=re['raw_obj'].postprocess(), 尝试加速转换为 RGB
+- [x] 了解 rawpy 的 rgb=re['raw_obj'].postprocess(), 尝试加速转换为 RGB
+   - 没有比采集图像显著的快
 - [x] ~~要不要考虑多帧融合 HDR?~~
    - 12bit raw 图能同时获得亮暗细节
+- [ ] 跑通 ParametrizeCamera_LoadAndSave.py MV_CC_FeatureSave
 
 
 ## 图片存储空间
