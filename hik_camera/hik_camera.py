@@ -141,13 +141,24 @@ class HikCamera(hik.MvCamera):
         assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
         assert not self.MV_CC_SetFloatValue("ExposureTime", t)
 
+    PIXEL_FORMATS = [
+        "BayerGB12Packed",
+        "BayerGR12Packed",
+        "BayerRG12Packed",
+        "BayerBG12Packed",
+    ]
+
     def set_raw(self):
-        try:
-            self.pixel_format = "BayerGB12Packed"
-            self.setitem("PixelFormat", self.pixel_format)
-        except AssertionError:
-            self.pixel_format = "BayerGR12Packed"
-            self.setitem("PixelFormat", self.pixel_format)
+        for pixel_format in self.PIXEL_FORMATS:
+            try:
+                self.pixel_format = pixel_format
+                self.setitem("PixelFormat", self.pixel_format)
+                return
+            except AssertionError:
+                pass
+        raise NotImplementedError(
+            "This camera's pixel_format not support any of {self.PIXEL_FORMATS}"
+        )
 
     def adjust_auto_exposure(self, t=2):
         boxx.sleep(0.1)
@@ -204,6 +215,11 @@ class HikCamera(hik.MvCamera):
             return "GBRG"
         elif "BayerGR" in self.pixel_format:
             return "GRBG"
+        elif "BayerRG" in self.pixel_format:
+            return "RGGB"
+        elif "BayerBG" in self.pixel_format:
+            return "BGGR"
+        raise NotImplementedError(self.pixel_format)
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
