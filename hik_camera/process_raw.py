@@ -87,11 +87,9 @@ class DngFileformat:
         dng_path, raw, bit=12, bayer_pattern="GBRG", compress=False, Orientation=1
     ):
         try:
-            from pydng.core import RAW2DNG, DNGTags, Tag
+            from pidng.core import RAW2DNG, DNGTags, Tag
         except ModuleNotFoundError as e:
-            boxx.pred(
-                "Please install PyDng by pip install git+https://github.com/schoolpost/PyDNG.git#subdirectory=src&egg=pydng"
-            )
+            boxx.pred('Please install pidng by "pip install pidng"')
             raise e
 
         assert raw.dtype in (np.uint16, np.uint8)

@@ -20,7 +20,6 @@ ENV LD_LIBRARY_PATH /opt/MVS/lib/64:/opt/MVS/lib/32:$LD_LIBRARY_PATH
 
 RUN pip install boxx
 RUN apt install -y git
-RUN pip install "git+https://github.com/schoolpost/PyDNG.git#subdirectory=src&egg=pydng"
 RUN apt install -y net-tools iputils-ping traceroute  
 
 COPY . /hik_camera
