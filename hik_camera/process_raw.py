@@ -122,14 +122,30 @@ class DngFileformat:
     def read_dng(dng_path):
         import rawpy
 
-        raw_obj = rawpy.imread(dng_path)
-        pattern = "".join(
-            [chr(raw_obj.color_desc[i]) for i in raw_obj.raw_pattern.flatten()]
-        )
-        raw = raw_obj.raw_image
-        bit = int(np.log2(raw_obj.white_level + 1))
-        # TODO %time rgb=re['raw_obj'].postprocess()
-        return dict(raw=raw, pattern=pattern, bit=bit, raw_obj=raw_obj)
+        class RawPy_(rawpy.RawPy):
+            def set_custom_attr(self):
+                raw_obj = self
+                raw_obj.pattern = "".join(
+                    [chr(raw_obj.color_desc[i]) for i in raw_obj.raw_pattern.flatten()]
+                )
+                raw_obj.raw = raw_obj.raw_image
+                raw_obj.bit = int(np.log2(raw_obj.white_level + 1))
+
+            def demosaicing(self, poww=1, demosaicing_method="Malvar2004"):
+                if "bit" not in self.__dict__:
+                    self.set_custom_attr()
+                return RawToRgbUint8(
+                    bit=self.bit,
+                    poww=poww,
+                    demosaicing_method=demosaicing_method,
+                    pattern=self.pattern,
+                )(self.raw_image)
+
+        raw_obj = RawPy_()
+        raw_obj.open_file(dng_path)
+        raw_obj.set_custom_attr()
+        return raw_obj
+        # return dict(raw=raw, pattern=pattern, bit=bit, raw_obj=raw_obj)
 
     @staticmethod
     def test(raw=None):
@@ -138,7 +154,7 @@ class DngFileformat:
         dngp = "../raw.dng"
         DngFileformat.save_dng(dngp, raw)
         re = DngFileformat.read_dng(dngp)
-        raw2 = re["raw"]
+        raw2 = re.raw_image
         os.system(f"ls -lh {dngp}")
         boxx.showb(dngp)
         assert (raw2 == raw).all()
