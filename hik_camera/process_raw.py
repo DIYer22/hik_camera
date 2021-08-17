@@ -83,9 +83,7 @@ class RawToRgbUint8:
 
 class DngFileformat:
     @staticmethod
-    def save_dng(
-        dng_path, raw, bit=12, bayer_pattern="GBRG", compress=False, Orientation=1
-    ):
+    def save_dng(dng_path, raw, bit=12, pattern="GBRG", compress=False, Orientation=1):
         try:
             from pidng.core import RAW2DNG, DNGTags, Tag
         except ModuleNotFoundError as e:
@@ -95,7 +93,7 @@ class DngFileformat:
         assert raw.dtype in (np.uint16, np.uint8)
         height, width = raw.shape
 
-        CFAPattern = ["RGB".index(c) for c in bayer_pattern]
+        CFAPattern = ["RGB".index(c) for c in pattern]
 
         # set DNG tags.
         t = DNGTags()
@@ -125,13 +123,13 @@ class DngFileformat:
         import rawpy
 
         raw_obj = rawpy.imread(dng_path)
-        bayer_pattern = "".join(
+        pattern = "".join(
             [chr(raw_obj.color_desc[i]) for i in raw_obj.raw_pattern.flatten()]
         )
         raw = raw_obj.raw_image
         bit = int(np.log2(raw_obj.white_level + 1))
         # TODO %time rgb=re['raw_obj'].postprocess()
-        return dict(raw=raw, bayer_pattern=bayer_pattern, bit=bit, raw_obj=raw_obj)
+        return dict(raw=raw, pattern=pattern, bit=bit, raw_obj=raw_obj)
 
     @staticmethod
     def test(raw=None):

@@ -196,9 +196,9 @@ class HikCamera(hik.MvCamera):
         return rgb
 
     def save_raw(self, raw, dng_path, compress=False):
-        bayer_pattern = self.get_bayer_pattern()
+        pattern = self.get_bayer_pattern()
         DngFileformat.save_dng(
-            dng_path, raw, bit=self.bit, bayer_pattern=bayer_pattern, compress=compress
+            dng_path, raw, bit=self.bit, pattern=pattern, compress=compress
         )
         return dng_path
 

@@ -24,6 +24,7 @@ python -m hik_camera.hik_camera
 
 
 ## TODO
+- [ ] python setup.py install 找不到 xls
 - [ ] 异常重置相机
    - self.MV_CC_SetCommandValue("DeviceReset")
 - [ ] 自研快速自动曝光算法?
