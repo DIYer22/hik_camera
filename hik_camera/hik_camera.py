@@ -12,9 +12,6 @@ with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"), boxx.impt(
 ):
     import MvCameraControl_class as hik
 
-with boxx.inpkg():
-    from .process_raw import RawToRgbUint8, DngFileformat
-
 int_to_ip = (
     lambda i: f"{(i & 0xff000000) >> 24}.{(i & 0x00ff0000) >> 16}.{(i & 0x0000ff00) >> 8}.{i & 0x000000ff}"
 )
@@ -186,6 +183,8 @@ class HikCamera(hik.MvCamera):
         return self._ip
 
     def raw_to_uint8_rgb(self, raw, poww=1, demosaicing_method="Malvar2004"):
+        from process_raw import RawToRgbUint8
+
         transfer_func = RawToRgbUint8(
             bit=self.bit,
             poww=poww,
@@ -196,6 +195,8 @@ class HikCamera(hik.MvCamera):
         return rgb
 
     def save_raw(self, raw, dng_path, compress=False):
+        from process_raw import DngFileformat
+
         pattern = self.get_bayer_pattern()
         DngFileformat.save_dng(
             dng_path, raw, bit=self.bit, pattern=pattern, compress=compress

@@ -1,3 +1,2 @@
 boxx
-colour_demosaicing
-pidng
+process_raw
