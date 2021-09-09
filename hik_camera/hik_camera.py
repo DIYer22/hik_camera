@@ -2,9 +2,12 @@
 
 import boxx
 from boxx import *
+
+import os
+import time
+import ctypes
 import numpy as np
 from threading import Lock, Thread
-import ctypes
 from ctypes import byref, POINTER, cast, sizeof, memset
 
 with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"), boxx.impt(
@@ -54,16 +57,18 @@ class HikCamera(hik.MvCamera):
     def __init__(self, ip=None, host_ip=None):
         super().__init__()
         self.lock = Lock()
+        self.TIMEOUT_MS = 40000
         if ip is None:
-            return
             ip = self.get_all_ips()[0]
         if host_ip is None:
             host_ip = get_host_ip_by_target_ip(ip)
         self._ip = ip
         self.host_ip = host_ip
-        # self.init_by_ip()
+        self._init()
+
+    def _init(self):
+        # self._init_by_spec_ip()
         self._init_by_enum()
-        self.TIMEOUT_MS = 40000
 
     def setting(self):
         # 设置自动曝光
@@ -114,6 +119,34 @@ class HikCamera(hik.MvCamera):
                 self.shape
             )
         return img
+
+    def robust_get_frame(self):
+        """
+        遇到错误, 会自动 reset device 并 retry 的 get frame
+        - 支持断网重连后继续工作
+        """
+        try:
+            return self.get_frame()
+        except Exception as e:
+            boxx.pred(e)
+            try:
+                self.MV_CC_SetCommandValue("DeviceReset")
+            except:
+                pass
+            self.waite()
+            self._init()
+            self.__enter__()
+            return self.get_frame()
+
+    def _ping(self):
+        return not os.system("ping -c 1 -w 1 " + self.ip + " > /dev/null")
+
+    def waite(self, timeout=20):
+        begin = time.time()
+        while not self._ping():
+            boxx.sleep(0.1)
+            if time.time() - begin > timeout:
+                raise TimeoutError(f"Lost connection to {self.ip} for {timeout}s!")
 
     @classmethod
     def get_all_ips(cls):
@@ -169,7 +202,7 @@ class HikCamera(hik.MvCamera):
 
     def get_shape(self):
         if not hasattr(self, "shape"):
-            self.get_frame()
+            self.robust_get_frame()
         return self.shape
 
     @property
@@ -230,6 +263,7 @@ class HikCamera(hik.MvCamera):
         # assert not super().MV_CC_CreateHandle(self.mvcc_dev_info)
         # assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
 
+        # TODO rember setting
         self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_ON)
         self.setitem("TriggerSource", hik.MV_TRIGGER_SOURCE_SOFTWARE)
         self.setitem("AcquisitionFrameRateEnable", False)
@@ -377,7 +411,7 @@ class HikCamera(hik.MvCamera):
 
         cam = RawCam.get_cam()
         with cam:
-            raw = cam.get_frame()
+            raw = cam.robust_get_frame()
             if cam.is_raw:
                 rgbs = [
                     cam.raw_to_uint8_rgb(raw, poww=1),
@@ -432,13 +466,13 @@ if __name__ == "__main__":
     cam = HikCamera(ip)
     # cam.test_raw()
     with cam, boxx.timeit("cam.get_frame"):
-        img = cam.get_frame()
+        img = cam.robust_get_frame()
         print("Saveing image to:", cam.save(img))
 
     print("-" * 40)
 
     cams = HikCamera.get_all_cams()
     with cams, boxx.timeit("cams.get_frame"):
-        imgs = cams.get_frame()
-        print("imgs = cams.get_frame()")
+        imgs = cams.robust_get_frame()
+        print("imgs = cams.robust_get_frame()")
         boxx.tree(imgs)
