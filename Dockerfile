@@ -35,3 +35,5 @@ CMD python -m hik_camera.hik_camera
 
 # docker build -t ylmegvii/hik_camera ./;docker run --net=host -v /tmp:/tmp -it ylmegvii/hik_camera;
 
+# docker build -t armharbor-dev-r.megvii-demo.com/library/hik_camera ./;docker run --net=host -v /tmp:/tmp -it armharbor-dev-r.megvii-demo.com/library/hik_camera;
+
