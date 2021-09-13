@@ -128,6 +128,7 @@ class HikCamera(hik.MvCamera):
         try:
             return self.get_frame()
         except Exception as e:
+            print(boxx.prettyFrameLocation())
             boxx.pred(e)
             try:
                 self.MV_CC_SetCommandValue("DeviceReset")
@@ -139,6 +140,7 @@ class HikCamera(hik.MvCamera):
             return self.get_frame()
 
     def _ping(self):
+        # TODO support Windows
         return not os.system("ping -c 1 -w 1 " + self.ip + " > /dev/null")
 
     def waite(self, timeout=20):
@@ -257,11 +259,6 @@ class HikCamera(hik.MvCamera):
 
     def __enter__(self):
         assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
-
-        # assert not self.MV_CC_SetCommandValue("DeviceReset")
-        # sleep(5)
-        # assert not super().MV_CC_CreateHandle(self.mvcc_dev_info)
-        # assert not self.MV_CC_OpenDevice(hik.MV_ACCESS_Exclusive, 0)
 
         # TODO rember setting
         self.setitem("TriggerMode", hik.MV_TRIGGER_MODE_ON)
