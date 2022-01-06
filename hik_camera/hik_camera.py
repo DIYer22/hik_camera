@@ -54,6 +54,9 @@ def get_setting_df():
 
 
 class HikCamera(hik.MvCamera):
+    continuous_adjust_exposure_cams = {}
+    _continuous_adjust_exposure_thread_on = False
+
     def __init__(self, ip=None, host_ip=None):
         super().__init__()
         self.lock = Lock()
@@ -65,37 +68,46 @@ class HikCamera(hik.MvCamera):
         self._ip = ip
         self.host_ip = host_ip
         self._init()
+        self.is_open = False
+        self.last_time_get_frame = 0
 
     def _init(self):
         # self._init_by_spec_ip()
         self._init_by_enum()
 
     def setting(self):
-        # 设置自动曝光
-        self.setitem("ExposureAuto", "Continuous")
-        # 取 RGB 图
-        self.pixel_format = "RGB8Packed"
-        self.setitem("PixelFormat", self.pixel_format)
-
-        # self.set_raw() # 取 raw 图
-        # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns
+        # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止丢包, 6 个百万像素相机推荐 15000
         # self.set_OptimalPacketSize()  # 最优包大小
+
+        self.set_rgb()  # 取 RGB 图
+        # self.set_raw() # 取 raw 图
+
+        # 手动曝光, 单位秒
+        # self.set_exposure_by_second(0.1)
+
+        # 设置为自动曝光
+        self.setitem("ExposureAuto", "Continuous")
+
+        # 每隔 120s 拍一次照片来调整自动曝光, 以防止太久没调整自动曝光, 导致曝光失效
+        # self.continuous_adjust_exposure(120)
+
+        # 初始化时候, 花两秒来调整自动曝光
+        # self.adjust_auto_exposure(2)
+
+    def _get_one_frame_to_buf(self):
+        with self.lock:
+            assert not self.MV_CC_SetCommandValue("TriggerSoftware")
+            assert not self.MV_CC_GetOneFrameTimeout(
+                byref(self.data_buf),
+                self.nPayloadSize,
+                self.stFrameInfo,
+                self.TIMEOUT_MS,
+            ), self.ip
+        self.last_time_get_frame = time.time()
 
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
-
-        try:
-            with self.lock:
-                assert not self.MV_CC_SetCommandValue("TriggerSoftware")
-                assert not self.MV_CC_GetOneFrameTimeout(
-                    byref(self.data_buf),
-                    self.nPayloadSize,
-                    stFrameInfo,
-                    self.TIMEOUT_MS,
-                ), self.ip
-
-        finally:
-            pass
+        self._get_one_frame_to_buf()
 
         h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
         self.bit = bit = self.nPayloadSize * 8 // h // w
@@ -129,7 +141,7 @@ class HikCamera(hik.MvCamera):
             return self.get_frame()
         except Exception as e:
             print(boxx.prettyFrameLocation())
-            boxx.pred(e)
+            boxx.pred(type(e).__name__, e)
             try:
                 self.MV_CC_SetCommandValue("DeviceReset")
             except:
@@ -166,12 +178,9 @@ class HikCamera(hik.MvCamera):
 
     get_all_cams = get_cams
 
-    def get_exposure(self):
-        return self["ExposureTime"]
-
-    def set_exposure(self, t):
-        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
-        assert not self.MV_CC_SetFloatValue("ExposureTime", t)
+    def set_rgb(self):
+        self.pixel_format = "RGB8Packed"
+        self.setitem("PixelFormat", self.pixel_format)
 
     PIXEL_FORMATS = [
         "BayerGB12Packed",
@@ -189,8 +198,21 @@ class HikCamera(hik.MvCamera):
             except AssertionError:
                 pass
         raise NotImplementedError(
-            "This camera's pixel_format not support any of {self.PIXEL_FORMATS}"
+            f"This camera's pixel_format not support any of {self.PIXEL_FORMATS}"
         )
+
+    def get_exposure(self):
+        return self["ExposureTime"]
+
+    def set_exposure(self, t):
+        assert not self.MV_CC_SetEnumValueByString("ExposureAuto", "Off")
+        assert not self.MV_CC_SetFloatValue("ExposureTime", t)
+
+    def get_exposure_by_second(self):
+        self.get_exposure() * 1e-6
+
+    def set_exposure_by_second(self, t):
+        self.set_exposure(t / 1e-6)
 
     def adjust_auto_exposure(self, t=2):
         boxx.sleep(0.1)
@@ -201,6 +223,45 @@ class HikCamera(hik.MvCamera):
             print("after_exposure", self.get_exposure())
         finally:
             self.MV_CC_StopGrabbing()
+
+    def continuous_adjust_exposure(self, interval=60):
+        """ 
+        触发模式下, 会额外起一条线程, 每隔大致 interval 秒, 拍一次照
+        以调整自动曝光. 该功能会避免任意两次拍照的时间间隔过小, 而导致网络堵塞
+        """
+        self.setitem("ExposureAuto", "Continuous")
+        self.interval = interval
+        HikCamera.continuous_adjust_exposure_cams[self.ip] = self
+        if not HikCamera._continuous_adjust_exposure_thread_on:
+            HikCamera._continuous_adjust_exposure_thread_on = True
+            boxx.setTimeout(self._continuous_adjust_exposure_thread, interval)
+
+    @classmethod
+    def _continuous_adjust_exposure_thread(cls):
+        cams = [
+            cam for cam in cls.continuous_adjust_exposure_cams.values() if cam.is_open
+        ]
+        if not len(cams):
+            cls._continuous_adjust_exposure_thread_on = False
+            return
+        now = time.time()
+        last_get_frame = max([cam.last_time_get_frame for cam in cams])
+
+        cam = sorted(
+            cams, key=lambda cam: now - cam.last_time_get_frame - cam.interval
+        )[-1]
+        # 避免任意两次拍照的时间间隔过小, 而导致网络堵塞
+        min_get_frame_gap = max(cam.interval / len(cams) / 4, 1)
+        if (
+            now - cam.last_time_get_frame >= cam.interval
+            and now - last_get_frame >= min_get_frame_gap
+        ):
+            # boxx.pred("adjust", cam.ip, time.time())
+            try:
+                cam._get_one_frame_to_buf()
+            except Exception as e:
+                boxx.pred(type(e).__name__, e)
+        boxx.setTimeout(cls._continuous_adjust_exposure_thread, 1)
 
     def get_shape(self):
         if not hasattr(self, "shape"):
@@ -230,12 +291,10 @@ class HikCamera(hik.MvCamera):
         return rgb
 
     def save_raw(self, raw, dng_path, compress=False):
-        from process_raw import DngFileformat
+        from process_raw import DngFile
 
         pattern = self.get_bayer_pattern()
-        DngFileformat.save_dng(
-            dng_path, raw, bit=self.bit, pattern=pattern, compress=compress
-        )
+        DngFile.save(dng_path, raw, bit=self.bit, pattern=pattern, compress=compress)
         return dng_path
 
     def save(self, img, path=""):
@@ -277,6 +336,7 @@ class HikCamera(hik.MvCamera):
         memset(byref(self.stFrameInfo), 0, sizeof(self.stFrameInfo))
 
         assert not self.MV_CC_StartGrabbing()
+        self.is_open = True
         return self
 
     def set_OptimalPacketSize(self):
@@ -292,6 +352,8 @@ class HikCamera(hik.MvCamera):
         self.setitem("AcquisitionFrameRateEnable", True)
         assert not self.MV_CC_StopGrabbing()
         self.MV_CC_CloseDevice()
+
+        self.is_open = False
 
     def __del__(self):
         self.MV_CC_DestroyHandle()
@@ -398,24 +460,6 @@ class HikCamera(hik.MvCamera):
         if ip is None:
             return cls.ip_to_dev_info
         return cls.ip_to_dev_info[ip]
-
-    @classmethod
-    def test_raw(cls):
-        class RawCam(cls):
-            def setting(self):
-                super().setting()
-                self.set_raw()
-
-        cam = RawCam.get_cam()
-        with cam:
-            raw = cam.robust_get_frame()
-            if cam.is_raw:
-                rgbs = [
-                    cam.raw_to_uint8_rgb(raw, poww=1),
-                    cam.raw_to_uint8_rgb(raw, poww=0.3),
-                ]
-                boxx.show(rgbs)
-        boxx.g()
 
     @classmethod
     def get_cam(cls):
