@@ -209,7 +209,7 @@ class HikCamera(hik.MvCamera):
         assert not self.MV_CC_SetFloatValue("ExposureTime", t)
 
     def get_exposure_by_second(self):
-        self.get_exposure() * 1e-6
+        return self.get_exposure() * 1e-6
 
     def set_exposure_by_second(self, t):
         self.set_exposure(t / 1e-6)

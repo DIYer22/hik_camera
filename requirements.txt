@@ -1,2 +1,2 @@
-boxx
+boxx>=0.9.10
 process_raw
