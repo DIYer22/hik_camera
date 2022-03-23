@@ -182,15 +182,14 @@ class HikCamera(hik.MvCamera):
         self.pixel_format = "RGB8Packed"
         self.setitem("PixelFormat", self.pixel_format)
 
-    PIXEL_FORMATS = [
-        "BayerGB12Packed",
-        "BayerGR12Packed",
-        "BayerRG12Packed",
-        "BayerBG12Packed",
-    ]
-
-    def set_raw(self):
-        for pixel_format in self.PIXEL_FORMATS:
+    def set_raw(self, bit=12, packed=True):
+        if packed:
+            packed = bit % 8
+        pixel_formats = [
+            "Bayer%s%d%s" % (color_format, bit, "Packed" if packed else "")
+            for color_format in ["GB", "GR", "RG", "BG"]
+        ]
+        for pixel_format in pixel_formats:
             try:
                 self.pixel_format = pixel_format
                 self.setitem("PixelFormat", self.pixel_format)
@@ -198,7 +197,7 @@ class HikCamera(hik.MvCamera):
             except AssertionError:
                 pass
         raise NotImplementedError(
-            f"This camera's pixel_format not support any of {self.PIXEL_FORMATS}"
+            f"This camera's pixel_format not support any {bit}bit of {pixel_formats}"
         )
 
     def get_exposure(self):
