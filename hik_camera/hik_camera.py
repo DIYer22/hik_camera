@@ -388,9 +388,10 @@ class HikCamera(hik.MvCamera):
         if dtype == "register":
             get_func = self.MV_CC_RegisterEventCallBackEx
         # print(get_func, value)
-        assert not get_func(
-            key, value
-        ), f"{get_func.__name__}('{key}', {value}) not return 0"
+        with self.lock:
+            assert not get_func(
+                key, value
+            ), f"{get_func.__name__}('{key}', {value}) not return 0"
         return value.value
 
     def setitem(self, key, value):
@@ -413,10 +414,10 @@ class HikCamera(hik.MvCamera):
             set_func = self.MV_CC_SetStringValue
         if dtype == "register":
             set_func = self.MV_CC_RegisterEventCallBackEx
-
-        assert not set_func(
-            key, value
-        ), f"{set_func.__name__}('{key}', {value}) not return 0"
+        with self.lock:
+            assert not set_func(
+                key, value
+            ), f"{set_func.__name__}('{key}', {value}) not return 0"
 
     __getitem__ = getitem
     __setitem__ = setitem
