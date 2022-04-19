@@ -4,6 +4,7 @@ import boxx
 from boxx import *
 
 import os
+import sys
 import time
 import ctypes
 import numpy as np
@@ -72,8 +73,8 @@ class HikCamera(hik.MvCamera):
         self.last_time_get_frame = 0
 
     def _init(self):
-        # self._init_by_spec_ip()
-        self._init_by_enum()
+        self._init_by_spec_ip()
+        # self._init_by_enum()
 
     def setting(self):
         # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止丢包, 6 个百万像素相机推荐 15000
@@ -164,8 +165,10 @@ class HikCamera(hik.MvCamera):
 
     @classmethod
     def get_all_ips(cls):
-        ip_to_dev_info = cls._get_dev_info()
-        return sorted(ip_to_dev_info)
+        # 通过新的线程, 绕过 hik sdk 枚举后无法 "无枚举连接相机"(使用 ip 直连)的 bug
+        get_all_ips_py = boxx.relfile("./get_all_ips.py")
+        ips = boxx.execmd(f'"{sys.executable}" "{get_all_ips_py}"').strip().split(" ")
+        return ips
 
     @classmethod
     def get_cams(cls, ips=None):
