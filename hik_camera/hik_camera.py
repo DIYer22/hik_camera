@@ -58,7 +58,7 @@ class HikCamera(hik.MvCamera):
     continuous_adjust_exposure_cams = {}
     _continuous_adjust_exposure_thread_on = False
 
-    def __init__(self, ip=None, host_ip=None):
+    def __init__(self, ip=None, host_ip=None, setting_items=None):
         super().__init__()
         self.lock = Lock()
         self.TIMEOUT_MS = 40000
@@ -66,6 +66,7 @@ class HikCamera(hik.MvCamera):
             ip = self.get_all_ips()[0]
         if host_ip is None:
             host_ip = get_host_ip_by_target_ip(ip)
+        self.setting_items = setting_items
         self._ip = ip
         self.host_ip = host_ip
         self._init()
@@ -79,8 +80,11 @@ class HikCamera(hik.MvCamera):
     def setting(self):
         # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止丢包, 6 个百万像素相机推荐 15000
         # self.set_OptimalPacketSize()  # 最优包大小
+        try:
+            self.set_rgb()  # 取 RGB 图
 
-        self.set_rgb()  # 取 RGB 图
+        except AssertionError:
+            pass
         # self.set_raw() # 取 raw 图
 
         # 手动曝光, 单位秒
@@ -165,10 +169,10 @@ class HikCamera(hik.MvCamera):
 
     @classmethod
     def get_all_ips(cls):
-        # 通过新的线程, 绕过 hik sdk 枚举后无法 "无枚举连接相机"(使用 ip 直连)的 bug
+        # 通过新的进程, 绕过 hik sdk 枚举后无法 "无枚举连接相机"(使用 ip 直连)的 bug
         get_all_ips_py = boxx.relfile("./get_all_ips.py")
         ips = boxx.execmd(f'"{sys.executable}" "{get_all_ips_py}"').strip().split(" ")
-        return ips
+        return list(filter(None, ips))
 
     @classmethod
     def get_cams(cls, ips=None):
@@ -214,7 +218,7 @@ class HikCamera(hik.MvCamera):
         return self.get_exposure() * 1e-6
 
     def set_exposure_by_second(self, t):
-        self.set_exposure(t / 1e-6)
+        self.set_exposure(int(t / 1e-6))
 
     def adjust_auto_exposure(self, t=2):
         boxx.sleep(0.1)
@@ -326,6 +330,11 @@ class HikCamera(hik.MvCamera):
         self.setitem("TriggerSource", hik.MV_TRIGGER_SOURCE_SOFTWARE)
         self.setitem("AcquisitionFrameRateEnable", False)
         self.setting()
+        if self.setting_items is not None:
+            if isinstance(self.setting_items, dict):
+                self.setting_items = self.setting_items.values()
+            for key, value in self.setting_items:
+                self.setitem(key, value)
 
         stParam = hik.MVCC_INTVALUE()
         memset(byref(stParam), 0, sizeof(hik.MVCC_INTVALUE))
