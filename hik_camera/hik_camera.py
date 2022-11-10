@@ -151,6 +151,7 @@ class HikCamera(hik.MvCamera):
                 self.MV_CC_SetCommandValue("DeviceReset")
             except:
                 pass
+            time.sleep(5)  # reset 后需要等一等
             self.waite()
             self._init()
             self.__enter__()
@@ -231,7 +232,7 @@ class HikCamera(hik.MvCamera):
             self.MV_CC_StopGrabbing()
 
     def continuous_adjust_exposure(self, interval=60):
-        """ 
+        """
         触发模式下, 会额外起一条线程, 每隔大致 interval 秒, 拍一次照
         以调整自动曝光. 该功能会避免任意两次拍照的时间间隔过小, 而导致网络堵塞
         """
