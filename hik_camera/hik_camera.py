@@ -24,6 +24,9 @@ ip_to_int = lambda ip: sum(
 )
 
 
+_lock_name_to_lock = {None: boxx.withfun()}
+
+
 def get_host_ip_by_target_ip(target_ip):
     import socket
 
@@ -58,7 +61,15 @@ class HikCamera(hik.MvCamera):
     continuous_adjust_exposure_cams = {}
     _continuous_adjust_exposure_thread_on = False
 
-    def __init__(self, ip=None, host_ip=None, setting_items=None):
+    def __init__(self, ip=None, host_ip=None, setting_items=None, config=None):
+        """_summary_
+
+        Args:
+            ip (str, optional): 相机 IP. Defaults to ips[0].
+            host_ip (str, optional): 从哪个网口. Defaults to None.
+            setting_items (dict, optional): 海康相机 xls 的标准命令和值, 更推荐 override setting. Defaults to None.
+            config (dict, optional): 该库的 config . Defaults to dict(lock_name="no_lock", repeat_trigger=1).
+        """
         super().__init__()
         self.lock = Lock()
         self.TIMEOUT_MS = 40000
@@ -67,6 +78,7 @@ class HikCamera(hik.MvCamera):
         if host_ip is None:
             host_ip = get_host_ip_by_target_ip(ip)
         self.setting_items = setting_items
+        self.config = config
         self._ip = ip
         self.host_ip = host_ip
         self._init()
@@ -75,7 +87,6 @@ class HikCamera(hik.MvCamera):
 
     def _init(self):
         self._init_by_spec_ip()
-        # self._init_by_enum()
 
     def setting(self):
         # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止丢包, 6 个百万像素相机推荐 15000
@@ -110,9 +121,22 @@ class HikCamera(hik.MvCamera):
             ), self.ip
         self.last_time_get_frame = time.time()
 
+    def get_frame_with_config(self):
+        config = self.config if self.config else {}
+        lock_name = config.get("lock_name")
+        lock = (
+            _lock_name_to_lock[lock_name]
+            if lock_name in _lock_name_to_lock
+            else _lock_name_to_lock.setdefault(lock_name, Lock())
+        )
+        repeat_trigger = config.get("repeat_trigger", 1)
+        with lock:
+            for i in range(repeat_trigger):
+                self._get_one_frame_to_buf()
+
     def get_frame(self):
         stFrameInfo = self.stFrameInfo
-        self._get_one_frame_to_buf()
+        self.get_frame_with_config()
 
         h, w = stFrameInfo.nHeight, stFrameInfo.nWidth
         self.bit = bit = self.nPayloadSize * 8 // h // w
@@ -265,7 +289,7 @@ class HikCamera(hik.MvCamera):
         ):
             # boxx.pred("adjust", cam.ip, time.time())
             try:
-                cam._get_one_frame_to_buf()
+                cam.get_frame_with_config()
             except Exception as e:
                 boxx.pred(type(e).__name__, e)
         boxx.setTimeout(cls._continuous_adjust_exposure_thread, 1)
