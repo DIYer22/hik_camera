@@ -4,8 +4,8 @@
 ## 安装
 1. 可直接使用 docker
    - `docker run --net=host -v /tmp:/tmp -it ylmegvii/hik_camera`
-2. 或者参考 [Dockerfile](Dockerfile), 一步一步手动安装, 主要就是:
-   1. 下载 MVS SDK(下载链接在 dockerfile 里面)
+2. 或者参考 [Dockerfile](Dockerfile), 一步一步手动安装, 主要为两步:
+   1. 下载安装 MVS SDK(官网下载需要注册, 下载链接在 dockerfile 里面)
    2. `pip install hik_camera`
 
 
