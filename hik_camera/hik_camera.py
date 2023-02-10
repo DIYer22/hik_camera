@@ -68,7 +68,7 @@ class HikCamera(hik.MvCamera):
             ip (str, optional): 相机 IP. Defaults to ips[0].
             host_ip (str, optional): 从哪个网口. Defaults to None.
             setting_items (dict, optional): 海康相机 xls 的标准命令和值, 更推荐 override setting. Defaults to None.
-            config (dict, optional): 该库的 config . Defaults to dict(lock_name="no_lock", repeat_trigger=1).
+            config (dict, optional): 该库的 config . Defaults to dict(lock_name=None(no_lock), repeat_trigger=1).
         """
         super().__init__()
         self.lock = Lock()
@@ -160,6 +160,18 @@ class HikCamera(hik.MvCamera):
                 self.shape
             )
         return img
+    
+    def reset(self):
+        with self.lock:
+            try:
+                self.MV_CC_SetCommandValue("DeviceReset")
+            except:
+                pass
+            time.sleep(5)  # reset 后需要等一等
+            self.waite()
+            self._init()
+            self.__enter__()
+        
 
     def robust_get_frame(self):
         """
@@ -171,14 +183,7 @@ class HikCamera(hik.MvCamera):
         except Exception as e:
             print(boxx.prettyFrameLocation())
             boxx.pred(type(e).__name__, e)
-            try:
-                self.MV_CC_SetCommandValue("DeviceReset")
-            except:
-                pass
-            time.sleep(5)  # reset 后需要等一等
-            self.waite()
-            self._init()
-            self.__enter__()
+            self.reset()
             return self.get_frame()
 
     def _ping(self):
