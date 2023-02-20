@@ -1,21 +1,24 @@
-# 海康网口相机控制库
-封装海康网口相机 SDK, 使得易于使用. 支持 Linux 和 Windows
+# 海康网口工业相机控制库
+使用 Pythonic 风格封装海康网口工业相机 MVS SDK, 使得易于使用. 支持 Linux 和 Windows
 
-## 安装
+- 支持 CE/CU/CS/CA/CH 系列的网口相机 
+
+
+## ▮ 安装
 1. 可直接使用 docker
    - `docker run --net=host -v /tmp:/tmp -it ylmegvii/hik_camera`
 2. 或者参考 [Dockerfile](Dockerfile), 一步一步手动安装, 主要为两步:
-   1. 下载安装 MVS SDK(官网下载需要注册, 下载链接在 dockerfile 里面)
+   1. 下载安装[海康官方 MVS SDK](https://www.hikrobotics.com/cn/machinevision/service/download)(官网下载需要注册, 也可以在 dockerfile 里面找下载链接)
    2. `pip install hik_camera`
 
 
-## Example
+## ▮ Example
 Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py) 的 "\_\_main\_\_"
 
 详细的配置说明见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py#L78) 中, `HikCamera.setting()` 的注释
 
-## 特性
-- 易于使用的接口
+## ▮ 特性
+- 易于使用的 Pythonic 接口
 - **鲁棒**: 遇到错误, 会自动 reset 相机并 retry
    - 接口为: `cams.robust_get_frame()`
 - 支持获得/处理/存取 raw 图, 保存为 dng 格式
