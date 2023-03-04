@@ -285,7 +285,7 @@ def press_any_key_exit():
 
 def grab_img():
     cap = HikMvCamera()
-    WINDOW_NAME = "Megvii detector"
+    WINDOW_NAME = "hik detector"
     while True:
         img_root = "./grab_img/"
         if not os.path.exists(img_root):
