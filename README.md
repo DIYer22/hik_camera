@@ -3,14 +3,14 @@
 
 ## ▮ 安装
 1. 可直接使用 docker
-   - `docker run --net=host -v /tmp:/tmp -it ylmegvii/hik_camera`
+   - `docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera`
 2. 或者参考 [Dockerfile](Dockerfile), 一步一步手动安装, 主要为两步:
    1. 下载安装[海康官方 MVS SDK](https://www.hikrobotics.com/cn/machinevision/service/download)(官网下载需要注册, 也可以在 dockerfile 里面找下载链接)
    2. `pip install hik_camera`
 
 
 ## ▮ Example
-Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py) 的 "\_\_main\_\_"
+Example 见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py) 最底部的 "\_\_main\_\_" 代码
 
 详细的配置说明见 [./hik_camera/hik_camera.py](./hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释
 

@@ -35,6 +35,6 @@ CMD python -m hik_camera.hik_camera
 
 # WORKDIR /opt/MVS/Samples/64/Trigger_Image
 
-# docker build -t ylmegvii/hik_camera ./;docker run --net=host -v /tmp:/tmp -it ylmegvii/hik_camera;
+# docker build -t diyer22/hik_camera ./;docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera;
 
 
