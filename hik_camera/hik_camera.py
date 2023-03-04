@@ -160,7 +160,7 @@ class HikCamera(hik.MvCamera):
                 self.shape
             )
         return img
-    
+
     def reset(self):
         with self.lock:
             try:
@@ -171,7 +171,6 @@ class HikCamera(hik.MvCamera):
             self.waite()
             self._init()
             self.__enter__()
-        
 
     def robust_get_frame(self):
         """
