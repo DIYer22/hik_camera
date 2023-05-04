@@ -261,8 +261,11 @@ class HikCamera(hik.MvCamera):
 
     def continuous_adjust_exposure(self, interval=60):
         """
-        触发模式下, 会额外起一条线程, 每隔大致 interval 秒, 拍一次照
-        以调整自动曝光. 该功能会避免任意两次拍照的时间间隔过小, 而导致网络堵塞
+        触发模式下, 会额外起一条全局守护线程, 对每个注册的相机每隔大致 interval 秒, 拍一次照
+        以调整自动曝光.
+        如果某个相机正常拍照了, 守护线程也会得知那个相机更新过曝光
+        该功能会避免任意两次拍照的时间间隔过小, 而导致网络堵塞
+        # TODO 考虑分 lock_name 来起 n 个全局线程分开管理设备?
         """
         self.setitem("ExposureAuto", "Continuous")
         self.interval = interval
@@ -282,15 +285,17 @@ class HikCamera(hik.MvCamera):
         now = time.time()
         last_get_frame = max([cam.last_time_get_frame for cam in cams])
 
+        # 选择最需要拍照的相机
         cam = sorted(
             cams, key=lambda cam: now - cam.last_time_get_frame - cam.interval
         )[-1]
         # 避免任意两次拍照的时间间隔过小, 而导致网络堵塞
         min_get_frame_gap = max(cam.interval / len(cams) / 4, 1)
-        if (
-            now - cam.last_time_get_frame >= cam.interval
-            and now - last_get_frame >= min_get_frame_gap
-        ):
+        # 表示当前相机距离上次拍照的时间是否大于等于用户设置的拍照时间间隔（cam.interval）。
+        sufficient_time_since_last_frame = now - cam.last_time_get_frame >= cam.interval
+        # 表示距离所有相机中最近一次拍照的时间是否大于等于计算出的最小拍照间隔
+        sufficient_gap_between_frames = now - last_get_frame >= min_get_frame_gap
+        if sufficient_time_since_last_frame and sufficient_gap_between_frames:
             # boxx.pred("adjust", cam.ip, time.time())
             try:
                 cam.get_frame_with_config()
@@ -465,8 +470,8 @@ class HikCamera(hik.MvCamera):
 
     def _init_by_spec_ip(self):
         """
-        SDK 有 Bug, 调用完"枚举设备" 接口后, 再调用"无枚举连接相机" 会无法打开相机.
-        暂时不能用
+        MVS SDK 有 Bug, 在 linux 下 调用完"枚举设备" 接口后, 再调用"无枚举连接相机" 会无法打开相机.
+        同一个进程的 SDK 枚举完成后不能再直连. 需要新建一个进程. 或者不枚举 直接直连就没问题
         """
         stDevInfo = hik.MV_CC_DEVICE_INFO()
         stGigEDev = hik.MV_GIGE_DEVICE_INFO()
