@@ -5,7 +5,7 @@
 - **易用**的 Pythonic API:
    - 采用面向对象封装, 方便多相机管理
    - 支持 `with` 语法来调用: `with HikCamera() as cam:`
-   - 简洁直观的控制语法: `cam["ExposureTime"]=100000` `print(cam["ExposureTime"])`
+   - 简洁直观的控制语法: `cam["ExposureTime"]=100000`, `print(cam["ExposureTime"])`
 - **鲁棒(robust)**: 遇到错误, 会自动 reset 相机并 retry
    - 接口为: `cams.robust_get_frame()`
 - 支持获得/处理/存取 **raw 图**, 并保存为 **`.dng` 格式**

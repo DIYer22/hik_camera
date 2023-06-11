@@ -14,7 +14,7 @@
 - [x] python setup.py install 找不到 xls
 - [x] 异常重置相机
    - self.MV_CC_SetCommandValue("DeviceReset")
-- [ ] 自研快速自动曝光算法?
+- [x] 自研快速自动曝光算法?
    - 自动曝光 RoI
 - [x] 了解 rawpy 的 rgb=re['raw_obj'].postprocess(), 尝试加速转换为 RGB
    - 没有比采集图像显著的快
