@@ -54,3 +54,4 @@ with cam:  # 用 with 的上下文的方式来 OpenDevice
 ```
 - 更全面的 Example 见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py) 最底部的 "\_\_main\_\_" 代码
 - 更多相机参数配置示例(曝光/Gain/PixelFormat等)见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释
+- 海康官方的配置项列表: [MvCameraNode-CH.csv](hik_camera/MvCameraNode-CH.csv)
