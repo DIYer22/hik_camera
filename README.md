@@ -20,13 +20,23 @@
 - Docker 方案:
    - `docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera`
 - 手动安装方案:
-   1. 安装官方驱动: 在[海康机器人官网](https://www.hikrobotics.com/cn/machinevision/service/download)下载安装对应系统的 "机器视觉工业相机客户端 MVS SDK"(官网下载需要注册, 也可以在 [Dockerfile](Dockerfile) 里面找到 Linux 版的下载链接)
+   1. 安装官方驱动: 在[海康机器人官网](https://www.hikrobotics.com/cn/machinevision/service/download)下载安装对应系统的 "机器视觉工业相机客户端 MVS SDK"
+      - 官网下载需要注册, 也可以在 [Dockerfile](Dockerfile) 里面找到 Linux 版的下载链接
    2. `pip install hik_camera`
    3. 若遇到问题, 可以参考 [Dockerfile](Dockerfile), 一步一步手动安装
-
+- 验证: 接入相机, 验证 hik_camera 是否安装成功:
 ```bash
-# 接入相机 测试是否成功
-python -m hik_camera.hik_camera
+$ python -m hik_camera.hik_camera
+
+All camera IP adresses: ['10.101.68.102', '10.101.68.103']
+Saveing image to: /tmp/10.101.68.102.jpg
+"cam.get_frame" spend time: 0.072249
+----------------------------------------
+imgs = cams.robust_get_frame()
+└── /: dict  2
+    ├── 10.101.68.102: (3036, 4024, 3)uint8
+    └── 10.101.68.103: (3036, 4024, 3)uint8
+"cams.get_frame" spend time: 0.700901
 ```
 
 ## ▮ 示例 Example
@@ -36,9 +46,11 @@ ips = HikCamera.get_all_ips()
 print("All camera IP adresses:", ips)
 ip = ips[0]
 cam = HikCamera(ip)
-with cam:
-   img = cam.robust_get_frame()
-   print("Saveing image to:", cam.save(img))
+with cam:  # 用 with 的上下文的方式来 OpenDevice
+   cam["ExposureAuto"] = "Off"  # 配置参数和海康官方 API 一致
+   cam["ExposureTime"] = 50000  # 单位 ns
+   rgb = cam.robust_get_frame()  # rgb's shape is uint8(h, w, 3)
+   print("Saveing image to:", cam.save(rgb, ip + ".jpg"))
 ```
 - 更全面的 Example 见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py) 最底部的 "\_\_main\_\_" 代码
-- 相机参数配置方式(曝光/Gain/PixelFormat等)见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释
+- 更多相机参数配置示例(曝光/Gain/PixelFormat等)见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释

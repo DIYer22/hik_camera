@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-
-import boxx
-from boxx import *
-
 import os
 import sys
 import time
+import boxx
 import ctypes
 import numpy as np
 from threading import Lock, Thread
 from ctypes import byref, POINTER, cast, sizeof, memset
 
-with boxx.impt("/opt/MVS/Samples/64/Python/MvImport"), boxx.impt(
-    r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
-):
-    import MvCameraControl_class as hik
+if sys.platform.startswith("win"):
+    MVCAM_SDK_PATH = os.environ.get("MVCAM_SDK_PATH", r"C:\Program Files (x86)\MVS")
+    MvImportDir = os.path.join(MVCAM_SDK_PATH, r"Development\Samples\Python\MvImport")
+
+else:
+    MVCAM_SDK_PATH = os.environ.get("MVCAM_SDK_PATH", "/opt/MVS")
+    MvImportDir = os.path.join(MVCAM_SDK_PATH, "Samples/64/Python/MvImport")
+
+with boxx.impt(MvImportDir):
+    try:
+        import MvCameraControl_class as hik
+    except ModuleNotFoundError as e:
+        boxx.pred("ERROR: can't find MvCameraControl_class.py in:", MvImportDir)
+        raise e
 
 int_to_ip = (
     lambda i: f"{(i & 0xff000000) >> 24}.{(i & 0x00ff0000) >> 16}.{(i & 0x0000ff00) >> 8}.{i & 0x000000ff}"
@@ -89,8 +96,6 @@ class HikCamera(hik.MvCamera):
         self._init_by_spec_ip()
 
     def setting(self):
-        # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止丢包, 6 个百万像素相机推荐 15000
-        # self.set_OptimalPacketSize()  # 最优包大小
         try:
             self.set_rgb()  # 取 RGB 图
 
@@ -109,6 +114,7 @@ class HikCamera(hik.MvCamera):
 
         # 初始化时候, 花两秒来调整自动曝光
         # self.adjust_auto_exposure(2)
+        # self.setitem("GevSCPD", 200)  # 包延时, 单位 ns, 防止多相机同时拍摄丢包, 6 个百万像素相机推荐 15000
 
     def _get_one_frame_to_buf(self):
         with self.lock:
@@ -553,13 +559,13 @@ if __name__ == "__main__":
     cam = HikCamera(ip)
     # cam.test_raw()
     with cam, boxx.timeit("cam.get_frame"):
-        img = cam.robust_get_frame()
+        img = cam.robust_get_frame()  # Default is RGB
         print("Saveing image to:", cam.save(img))
 
     print("-" * 40)
 
     cams = HikCamera.get_all_cams()
     with cams, boxx.timeit("cams.get_frame"):
-        imgs = cams.robust_get_frame()
+        imgs = cams.robust_get_frame()  # 返回一个 dict, key 是 ip, value 是图像
         print("imgs = cams.robust_get_frame()")
         boxx.tree(imgs)
