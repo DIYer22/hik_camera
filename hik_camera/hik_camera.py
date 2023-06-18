@@ -20,7 +20,10 @@ with boxx.impt(MvImportDir):
     try:
         import MvCameraControl_class as hik
     except ModuleNotFoundError as e:
-        boxx.pred("ERROR: can't find MvCameraControl_class.py in:", MvImportDir)
+        boxx.pred(
+            "ERROR: can't find MvCameraControl_class.py in: %s, please install MVS SDK"
+            % MvImportDir
+        )
         raise e
 
 int_to_ip = (

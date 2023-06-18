@@ -20,7 +20,7 @@
 - Docker 方案:
    - `docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera`
 - 手动安装方案:
-   1. 安装官方驱动: 在[海康机器人官网](https://www.hikrobotics.com/cn/machinevision/service/download)下载安装对应系统的 "机器视觉工业相机客户端 MVS SDK"
+   1. 安装官方驱动: 在[海康机器人官网](https://www.hikrobotics.com/cn/machinevision/service/download)下载安装对应系统的 “机器视觉工业相机客户端 MVS SDK”
       - 官网下载需要注册, 也可以在 [Dockerfile](Dockerfile) 里面找到 Linux 版的下载链接
    2. `pip install hik_camera`
    3. 若遇到问题, 可以参考 [Dockerfile](Dockerfile), 一步一步手动安装
