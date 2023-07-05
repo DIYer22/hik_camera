@@ -195,8 +195,14 @@ class HikCamera(hik.MvCamera):
             return self.get_frame()
 
     def _ping(self):
-        # TODO support Windows
-        return not os.system("ping -c 1 -w 1 " + self.ip + " > /dev/null")
+        if sys.platform.startswith("win"):
+            return not os.system("ping -n 1 " + self.ip + " > nul")
+        else:
+            if os.system(f"which ping>/dev/null"):
+                print("Not found ping in os.system")
+                boxx.sleep(18)
+                return True
+            return not os.system("ping -c 1 -w 1 " + self.ip + " > /dev/null")
 
     def waite(self, timeout=20):
         begin = time.time()

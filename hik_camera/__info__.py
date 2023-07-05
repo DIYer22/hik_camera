@@ -1,5 +1,5 @@
 __title__ = "hik_camera"
-__version__ = "0.2.14"
+__version__ = "0.2.15"
 __author__ = "Lei Yang"
 __author_email__ = ""
 __url__ = ""
