@@ -1,5 +1,5 @@
 import boxx, cv2
-from hik_camera.hik_camera import HikCamera
+from hik_camera import HikCamera
 
 
 class CvShow:
@@ -44,8 +44,7 @@ class Hik(HikCamera):
         try:
             self.set_rgb()  # 取 RGB 图
         except AssertionError:
-            self.set_raw(12)
-        pass
+            self.set_raw(8)  # 有的相机不支持 RGB, 只支持 raw 图
 
 
 if __name__ == "__main__":
@@ -55,17 +54,19 @@ if __name__ == "__main__":
     boxx.makedirs(dirr)
     ips = Hik.get_all_ips()
     print("All camera IP adresses:", ips)
+    print("Press 'q' to quit")
+    print("Press 'space' to save the current frame from all cameras")
     cams = Hik.get_all_cams()
-    with cams, CvShow() as cv_show:
-        for idx, key in enumerate(cv_show):
+    with cams, CvShow() as cvshow:
+        for idx, key in enumerate(cvshow):
             if key == "q":
                 break
             timestr = localTimeStr(1)
             for ip, cam in cams.items():
                 img = cam.get_frame()
-                if cam.is_raw:
+                if cam.is_raw:  # 如果是采集的 raw 图, demosaicing 为 RGB
                     img = cam.raw_to_uint8_rgb(img, poww=0.5)
-                cv_show.imshow(img[::3, ::3], window=ip)
+                cvshow.imshow(img[::3, ::3], window=ip)
                 if key == " ":
                     imgp = pathjoin(dirr, f"{timestr}~{ip}.jpg")
                     print("Save to", imgp)

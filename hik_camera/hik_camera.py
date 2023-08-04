@@ -566,7 +566,6 @@ if __name__ == "__main__":
     print("All camera IP adresses:", ips)
     ip = ips[0]
     cam = HikCamera(ip)
-    # cam.test_raw()
     with cam, boxx.timeit("cam.get_frame"):
         img = cam.robust_get_frame()  # Default is RGB
         print("Saveing image to:", cam.save(img))

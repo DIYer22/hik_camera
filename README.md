@@ -39,7 +39,15 @@ imgs = cams.robust_get_frame()
 "cams.get_frame" spend time: 0.700901
 ```
 
-## ▮ 示例 Example
+## ▮ 用法 Usage
+### 图像采集 Demo
+```bash
+python -m hik_camera.collect_img
+```
+- 运行后会弹出 opencv 窗口显示相机图像流, 按 `"空格"` 键拍照, `Q` 键退出
+- 采图 demo 源代码在 [hik_camera/collect_img.py](hik_camera/collect_img.py)
+
+### Python 接口
 ```Python
 from hik_camera import HikCamera
 ips = HikCamera.get_all_ips()
@@ -49,9 +57,10 @@ cam = HikCamera(ip)
 with cam:  # 用 with 的上下文的方式来 OpenDevice
    cam["ExposureAuto"] = "Off"  # 配置参数和海康官方 API 一致
    cam["ExposureTime"] = 50000  # 单位 ns
-   rgb = cam.robust_get_frame()  # rgb's shape is uint8(h, w, 3)
+   rgb = cam.robust_get_frame()  # rgb's shape is np.uint8(h, w, 3)
    print("Saveing image to:", cam.save(rgb, ip + ".jpg"))
 ```
 - 更全面的 Example 见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py) 最底部的 "\_\_main\_\_" 代码
 - 更多相机参数配置示例(曝光/Gain/PixelFormat等)见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释
 - 海康官方的配置项列表: [MvCameraNode-CH.csv](hik_camera/MvCameraNode-CH.csv)
+- 推荐通过继承 `HikCamera` 类, 并 override setting 函数来配置相机参数, 例子: [hik_camera/collect_img.py](hik_camera/collect_img.py)
