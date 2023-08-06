@@ -17,7 +17,7 @@
 - 方便封装为 ROS 节点
 
 ## ▮ 安装 Install
-- Docker 方案:
+- Docker 一键运行:
    - `docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera`
 - 手动安装方案:
    1. 安装官方驱动: 在[海康机器人官网](https://www.hikrobotics.com/cn/machinevision/service/download)下载安装对应系统的 “机器视觉工业相机客户端 MVS SDK”
