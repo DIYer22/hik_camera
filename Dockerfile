@@ -32,5 +32,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 CMD python -m hik_camera.hik_camera
 
-# docker build -t diyer22/hik_camera ./;docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera;
+# docker build -t diyer22/hik_camera ./ && docker run --net=host -v /tmp:/tmp -it diyer22/hik_camera;
 
