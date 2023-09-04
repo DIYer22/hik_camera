@@ -21,6 +21,7 @@
 - [x] ~~要不要考虑多帧融合 HDR?~~
    - 12bit raw 图能同时获得亮暗细节
 - [ ] 跑通 ParametrizeCamera_LoadAndSave.py MV_CC_FeatureSave
+- [ ] DNG 支持正确的 meta 信息
 
 
 ## 图片存储空间
