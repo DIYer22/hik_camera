@@ -1,2 +1,4 @@
 boxx>=0.10.7
+git+https://github.com/schoolpost/PiDNG.git
 process_raw
+opencv-python>=4.9.0.80
