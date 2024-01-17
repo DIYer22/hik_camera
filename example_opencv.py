@@ -1,3 +1,8 @@
+# On every platform you need the corresponding MVS SDK.
+# On Windows you need Visual Studio c++ build tools
+# On Ubuntu you need (assuming python3.10):
+# sudo apt-get install build-essential python3.10-dev
+
 from hik_camera.hik_camera import HikCamera
 
 import cv2

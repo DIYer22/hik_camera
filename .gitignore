@@ -36,3 +36,5 @@ eggs/
 *.png
 *.jpg
 grab_img/
+
+.venv/
