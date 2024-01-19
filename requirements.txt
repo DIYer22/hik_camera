@@ -1,2 +1,5 @@
 boxx>=0.10.7
+# for Windows User should install PiDNG first
+# git+https://github.com/schoolpost/PiDNG.git
 process_raw
+opencv-python>=4.6.0
