@@ -77,8 +77,7 @@ def get_setting_df() -> boxx.pd.DataFrame:
     Read the MvCameraNode-CH.csv file and return a pandas DataFrame
     which contains the camera settings key names, dependencies, and data types.
     """
-    csv = boxx.pd.read_csv(
-        __file__.replace("hik_camera.py", "MvCameraNode-CH.csv"))
+    csv = boxx.pd.read_csv(__file__.replace("hik_camera.py", "MvCameraNode-CH.csv"))
     setting_df = boxx.pd.DataFrame()
 
     def to_key(key):
@@ -108,11 +107,13 @@ class HikCamera(hik.MvCamera):
     continuous_adjust_exposure_cams = {}
     _continuous_adjust_exposure_thread_on = False
 
-    def __init__(self,
-                 ip: str = None,
-                 host_ip: str = None,
-                 setting_items: dict = None,
-                 config: dict = None) -> None:
+    def __init__(
+        self,
+        ip: str = None,
+        host_ip: str = None,
+        setting_items: dict = None,
+        config: dict = None,
+    ) -> None:
         """
         Constructor for the HikCamera class.
 
@@ -123,7 +124,9 @@ class HikCamera(hik.MvCamera):
             config (dict, optional): 该库的 config . Defaults to dict(lock_name=None(no_lock), repeat_trigger=1).
         """
         super().__init__()
-        self.lock = Lock()  # Instantiate a lock used to prevent multiple threads from accessing the camera at the same time during critical operations
+        self.lock = (
+            Lock()
+        )  # Instantiate a lock used to prevent multiple threads from accessing the camera at the same time during critical operations
         self.TIMEOUT_MS = 40000
         self.is_open = False
         self.last_time_get_frame = 0
@@ -473,13 +476,12 @@ class HikCamera(hik.MvCamera):
 
     def save_raw(self, raw, dng_path, compress=False):
         from process_raw import DngFile
+
         pattern = self.get_bayer_pattern()
         DngFile.save(dng_path, raw, bit=self.bit, pattern=pattern, compress=compress)
         return dng_path
 
-    def save(self,
-             img: np.ndarray,
-             path: str = "") -> None:
+    def save(self, img: np.ndarray, path: str = "") -> None:
         """
         Save an image to the specified path.
         """
@@ -567,8 +569,7 @@ class HikCamera(hik.MvCamera):
     def __del__(self) -> None:
         self.MV_CC_DestroyHandle()
 
-    def MV_CC_CreateHandle(self,
-                           mvcc_dev_info: hik.MV_CC_DEVICE_INFO) -> None:
+    def MV_CC_CreateHandle(self, mvcc_dev_info: hik.MV_CC_DEVICE_INFO) -> None:
         """
         Create a handle to a GigE camera given its device info.
         """
@@ -579,8 +580,7 @@ class HikCamera(hik.MvCamera):
     high_speed_lock = Lock()
     setting_df = get_setting_df()
 
-    def getitem(self,
-                key: str) -> Any:
+    def getitem(self, key: str) -> Any:
         """
         Get a camera setting value given its key.
         """
@@ -616,9 +616,7 @@ class HikCamera(hik.MvCamera):
             ), f"{get_func.__name__}('{key}', {value}) not return 0"
         return value.value
 
-    def setitem(self,
-                key: str,
-                value: Any) -> None:
+    def setitem(self, key: str, value: Any) -> None:
         """
         Set a camera setting to a given value.
         """
