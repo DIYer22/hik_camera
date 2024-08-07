@@ -64,3 +64,5 @@ with cam:  # 用 with 的上下文的方式来 OpenDevice
 - 更多相机参数配置示例(曝光/Gain/PixelFormat等)见 [hik_camera/hik_camera.py](hik_camera/hik_camera.py#L91) 中, `HikCamera.setting()` 的注释
 - 海康官方的配置项列表: [MvCameraNode-CH.csv](hik_camera/MvCameraNode-CH.csv)
 - 推荐通过继承 `HikCamera` 类, 并 override setting 函数来配置相机参数, 例子: [hik_camera/collect_img.py](hik_camera/collect_img.py)
+
+广告：相机标定推荐使用 [calibrating](https://github.com/DIYer22/calibrating) 库，能方便标定相机内外参、并快速构建双目深度相机
